@@ -1,0 +1,93 @@
+
+[
+  {
+    "id": "haihub-ds",
+    "aliases": ["ds", "deepseek-v3"],
+    "protocol": "open_ai_completions",
+    "default_base_url": "https://api.haihub.cn/v1",
+    "base_url_env": "LLM_BASE_URL",
+    "api_key_env": "LLM_API_KEY",
+    "api_key_required": true,
+    "model_env": "LLM_MODEL",
+    "default_model": "DeepSeek-V3-0324",
+    "description": "HaiHub - DeepSeek V3 (2024-03-24)",
+    "setup": {
+      "kind": "api_key",
+      "secret_name": "llm_haihub_api_key",
+      "display_name": "HaiHub DeepSeek-V3",
+      "can_list_models": false
+    }
+  },
+  {
+    "id": "haihub-ds31",
+    "aliases": ["ds31", "deepseek-v3.1"],
+    "protocol": "open_ai_completions",
+    "default_base_url": "https://api.haihub.cn/v1",
+    "base_url_env": "LLM_BASE_URL",
+    "api_key_env": "LLM_API_KEY",
+    "api_key_required": true,
+    "model_env": "LLM_MODEL",
+    "default_model": "DeepSeek-V3.1",
+    "description": "HaiHub - DeepSeek V3.1",
+    "setup": {
+      "kind": "api_key",
+      "secret_name": "llm_haihub_api_key",
+      "display_name": "HaiHub DeepSeek-V3.1",
+      "can_list_models": false
+    }
+  },
+  {
+    "id": "haihub-kimi",
+    "aliases": ["kimi", "kimi-k2"],
+    "protocol": "open_ai_completions",
+    "default_base_url": "https://api.haihub.cn/v1",
+    "base_url_env": "LLM_BASE_URL",
+    "api_key_env": "LLM_API_KEY",
+    "api_key_required": true,
+    "model_env": "LLM_MODEL",
+    "default_model": "Kimi-K2",
+    "description": "HaiHub - Moonshot Kimi K2",
+    "setup": {
+      "kind": "api_key",
+      "secret_name": "llm_haihub_api_key",
+      "display_name": "HaiHub Kimi-K2",
+      "can_list_models": false
+    }
+  },
+  {
+    "id": "haihub-qwen",
+    "aliases": ["qwen", "qwen3-235b"],
+    "protocol": "open_ai_completions",
+    "default_base_url": "https://api.haihub.cn/v1",
+    "base_url_env": "LLM_BASE_URL",
+    "api_key_env": "LLM_API_KEY",
+    "api_key_required": true,
+    "model_env": "LLM_MODEL",
+    "default_model": "Qwen3-235B-A22B",
+    "description": "HaiHub - Qwen3 235B MoE (22B active)",
+    "setup": {
+      "kind": "api_key",
+      "secret_name": "llm_haihub_api_key",
+      "display_name": "HaiHub Qwen3-235B",
+      "can_list_models": false
+    }
+  },
+  {
+    "id": "haihub-qwen32",
+    "aliases": ["qwen32", "qwen3-32b"],
+    "protocol": "open_ai_completions",
+    "default_base_url": "https://api.haihub.cn/v1",
+    "base_url_env": "LLM_BASE_URL",
+    "api_key_env": "LLM_API_KEY",
+    "api_key_required": true,
+    "model_env": "LLM_MODEL",
+    "default_model": "Qwen3-32B-FP8",
+    "description": "HaiHub - Qwen3 32B FP8",
+    "setup": {
+      "kind": "api_key",
+      "secret_name": "llm_haihub_api_key",
+      "display_name": "HaiHub Qwen3-32B",
+      "can_list_models": false
+    }
+  }
+]

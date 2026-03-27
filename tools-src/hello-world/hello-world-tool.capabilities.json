@@ -1,0 +1,5 @@
+{
+  "description": "A simple hello-world WASM tool that greets a person by name. Use this to test WASM tool integration.",
+  "version": "0.1.0",
+  "wit_version": "0.3.0"
+}
