@@ -1,0 +1,19 @@
+
+[workspace]
+
+[package]
+name = "mini-agent-loop"
+version = "0.1.0"
+edition = "2021"
+description = """
+Minimal standalone extraction of IronClaw's agentic loop.
+Demonstrates: stdin → Agentic Loop → LLM → Tool Execute → Response → stdout
+No channels, no database, no WASM — just the core loop distilled to ~600 lines.
+"""
+
+[dependencies]
+tokio = { version = "1", features = ["full"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+async-trait = "0.1"
+reqwest = { version = "0.12", features = ["json"] }
