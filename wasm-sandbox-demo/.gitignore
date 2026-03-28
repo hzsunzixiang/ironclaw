@@ -1,0 +1,10 @@
+# Vim swap files
+*.swp
+*.swo
+*~
+
+# Rust build artifacts
+target/
+
+# Generated WASM files
+*.wasm
