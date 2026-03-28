@@ -14,6 +14,7 @@
 - [第三部分：Host 端代码（沙箱运行时）](#第三部分host-端代码沙箱运行时)
 - [构建与运行](#构建与运行)
 - [调试指南](#调试指南)
+- [深入理解：Host 如何调用 Guest](#深入理解host-如何调用-guest)
 - [关键机制总结](#关键机制总结)
 
 ---
@@ -743,6 +744,100 @@ WASMTIME_LOG=wasmtime_wasi=debug make run-debug
 | 编译产物 | 原生机器码 | 原生机器码 ✅ 相同 |
 | 调试信息格式 | DWARF | DWARF ✅ 相同 |
 | 断点/单步/查看变量 | `b` / `n` / `p` | `b` / `n` / `p` ✅ 相同 |
+
+---
+
+## 深入理解：Host 如何调用 Guest
+
+### 为什么 `CalculatorTool` 在 Host 中看不到？
+
+**因为 Host 根本不需要知道 `CalculatorTool` 的存在。** 这是 WASM 沙箱架构的核心设计——Host 和 Guest 之间通过 **WIT 接口（合约）** 通信，而不是直接引用对方的类型。
+
+| | Guest 端 (`lib.rs`) | Host 端 (`main.rs`) |
+|---|---|---|
+| 知道 `CalculatorTool` 吗？ | ✅ 知道，自己定义的 | ❌ 完全不知道 |
+| 知道 `CalculatorInput` 吗？ | ✅ 知道，自己定义的 | ❌ 完全不知道 |
+| 知道 WIT 接口吗？ | ✅ `execute`, `schema`, `description` | ✅ `call_execute`, `call_schema`, `call_description` |
+
+Host 只知道：**"有一个 WASM 组件，它导出了 `execute`、`schema`、`description` 三个函数"**。至于这些函数背后是 `CalculatorTool` 还是 `WeatherTool` 还是别的什么，Host 完全不关心。
+
+这就像 **HTTP 客户端和服务端** 的关系：
+
+| HTTP 类比 | WASM 对应 |
+|-----------|-----------|
+| URL + JSON Schema | WIT 接口定义 |
+| HTTP 协议 | WASM Component Model |
+| 服务端的 `class UserController` | Guest 的 `struct CalculatorTool` |
+| 客户端看不到 `UserController` | Host 看不到 `CalculatorTool` |
+| 客户端只知道 `POST /api/users` | Host 只知道 `call_execute()` |
+
+**Host 加载的是编译后的 `.wasm` 二进制文件**，不是 Guest 的 Rust 源码。所有 Rust 类型信息（`CalculatorTool`、`CalculatorInput` 等）在编译成 `.wasm` 后就消失了，只剩下 WIT 合约定义的导出函数。这正是 WASM 的优势之一——**Guest 可以用任何语言编写**（Rust、Go、C、Python），Host 完全不需要知道。
+
+### Host 调用 Guest 的完整入口流程
+
+Host 调用 Guest 分为 **3 步**：
+
+#### Step 1：加载 `.wasm` 文件并实例化
+
+```rust
+// 加载编译好的 .wasm 二进制文件（不是 Rust 源码！）
+let wasm_bytes = std::fs::read(&wasm_path)?;
+let component = wasmtime::component::Component::new(&engine, &wasm_bytes)?;
+
+// 实例化 — 这是入口的起点
+let tool = SandboxedTool::instantiate(&mut store, &component, &linker)?;
+```
+
+`SandboxedTool` 是 `wasmtime::component::bindgen!` 宏根据 WIT 文件自动生成的类型，**不是 Guest 的 `CalculatorTool`**。
+
+#### Step 2：获取接口访问器
+
+```rust
+tool.demo_sandbox_tool()  // 返回 tool 接口的访问器
+```
+
+`demo_sandbox_tool()` 的命名来自 WIT 的包名 + 接口名：`demo:sandbox/tool` → `demo_sandbox_tool()`。
+
+#### Step 3：调用导出函数
+
+```rust
+// 调用 description()
+let desc = tool.demo_sandbox_tool().call_description(&mut store)?;
+
+// 调用 schema()
+let schema_str = tool.demo_sandbox_tool().call_schema(&mut store)?;
+
+// 调用 execute()
+let request = exports::demo::sandbox::tool::Request {
+    params: r#"{"operation": "add", "a": 42, "b": 58}"#.to_string(),
+};
+let response = tool.demo_sandbox_tool().call_execute(&mut store, &request)?;
+```
+
+### 完整调用链
+
+```
+Host 端 (main.rs)                    WASM 边界                     Guest 端 (lib.rs)
+─────────────────                    ─────────                     ────────────────
+SandboxedTool::instantiate()
+        │
+        ▼
+tool.demo_sandbox_tool()  ──→  .wasm 文件的导出表  ──→  export!(CalculatorTool)
+        │                                                       │
+        ▼                                                       ▼
+call_execute(&store, &req)  ──→  跨 WASM 边界调用  ──→  CalculatorTool::execute()
+                                                               │
+                                                               ▼
+                                                        impl Guest for CalculatorTool
+                                                               │
+                                                               ▼
+                                                        fn execute(req) -> Response
+```
+
+关键点：
+- `export!(CalculatorTool)` 在 Guest 编译时将 `CalculatorTool` 的方法注册到 `.wasm` 文件的导出表中
+- Host 通过 `SandboxedTool`（自动生成的类型）访问这些导出，完全不知道背后是 `CalculatorTool`
+- 整个过程类似于：**编译后的 `.wasm` 文件就是一个"黑盒"，Host 只能通过 WIT 定义的接口与之交互**
 
 ---
 
