@@ -1,0 +1,13 @@
+[package]
+name = "wasm-host"
+version = "0.1.0"
+edition = "2021"
+description = "Host runtime that loads and executes WASM tools in a sandbox"
+publish = false
+
+[dependencies]
+wasmtime = { version = "28", features = ["component-model"] }
+wasmtime-wasi = "28"
+serde_json = "1"
+
+[workspace]
