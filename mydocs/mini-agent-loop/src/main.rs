@@ -56,7 +56,7 @@ async fn main() {
     println!("║  This demo shows the core agentic loop:                    ║");
     println!("║    stdin → LLM → Tool Execute → Response → stdout          ║");
     println!("║                                                            ║");
-    println!("║  Config: ~/HAI_WOA.json (real LLM API)                     ║");
+    println!("║  Config: ./HAI_WOA.json (real LLM API)                     ║");
     println!("║                                                            ║");
     println!("║  Try:                                                      ║");
     println!("║    • \"What is 42 + 58?\"                                    ║");
@@ -74,12 +74,12 @@ async fn main() {
 
     // 1. Create LLM provider from ~/HAI_WOA.json config
     let hai_config = HaiConfig::load().unwrap_or_else(|e| {
-        eprintln!("❌ Failed to load ~/HAI_WOA.json: {}", e);
-        eprintln!("   Please create ~/HAI_WOA.json with your LLM API configuration.");
+        eprintln!("❌ Failed to load ./HAI_WOA.json: {}", e);
+        eprintln!("   Please copy HAI_WOA.template.json to HAI_WOA.json and fill in your API key.");
         std::process::exit(1);
     });
 
-    println!("✅ Loaded config from ~/HAI_WOA.json");
+    println!("✅ Loaded config from ./HAI_WOA.json");
     println!("   Model: {}", hai_config.model);
     println!("   Base URL: {}", hai_config.base_url().unwrap_or_default());
     println!("   Available shortcuts: {}", hai_config.list_models().iter()
@@ -108,12 +108,17 @@ async fn main() {
     let mut registry = ToolRegistry::new();
     registry.register(Box::new(CalculatorTool));
 
-    // 3. Create system prompt
-    let system_prompt = ChatMessage::system(
-        "You are a helpful assistant with access to a calculator tool. \
-         When the user asks a math question, use the calculator tool to compute the answer. \
-         For non-math questions, respond directly."
-    );
+    // 3. Helper to build system prompt with current model identity
+    let make_system_prompt = |model: &str| -> ChatMessage {
+        ChatMessage::system(&format!(
+            "You are a helpful assistant powered by the {} model. \
+             You have access to a calculator tool. \
+             When the user asks a math question, use the calculator tool to compute the answer. \
+             For non-math questions, respond directly. \
+             When asked about your identity, truthfully state that you are based on {}.",
+            model, model
+        ))
+    };
 
     // 4. Loop config
     let config = AgenticLoopConfig::default();
@@ -168,7 +173,7 @@ async fn main() {
 
         // ── Build conversation context ──
         let mut messages = vec![
-            system_prompt.clone(),
+            make_system_prompt(&current_model),
             ChatMessage::user(input),
         ];
 

@@ -36,10 +36,11 @@ pub struct ModelEntry {
 }
 
 impl HaiConfig {
-    /// Load from ~/HAI_WOA.json
+    /// Load from ./HAI_WOA.json (project directory)
     pub fn load() -> Result<Self, String> {
-        let home = dirs::home_dir().ok_or("Cannot determine home directory")?;
-        let path = home.join("HAI_WOA.json");
+        let path = std::env::current_dir()
+            .map_err(|e| format!("Cannot determine current directory: {}", e))?
+            .join("HAI_WOA.json");
         let content = std::fs::read_to_string(&path)
             .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
         serde_json::from_str(&content)

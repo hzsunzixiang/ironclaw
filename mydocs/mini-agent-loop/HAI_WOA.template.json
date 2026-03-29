@@ -1,0 +1,27 @@
+{
+  "model": "openai/DeepSeek-V3-0324",
+  "models": {
+    "ds": {
+      "id": "openai/DeepSeek-V3-0324"
+    },
+    "ds31": {
+      "id": "openai/DeepSeek-V3.1"
+    },
+    "qwen": {
+      "id": "openai/Qwen3-235B-A22B"
+    },
+    "qwen32": {
+      "id": "openai/Qwen3-32B-FP8"
+    },
+    "kimi": {
+      "id": "openai/Kimi-K2"
+    }
+  },
+  "env": {
+    "OPENAI_API_KEY": "<your-api-key-here>",
+    "OPENAI_BASE_URL": "http://api.haihub.cn/v1"
+  },
+  "openai": {
+    "useChatCompletions": true
+  }
+}
