@@ -55,10 +55,7 @@ pub async fn run_agentic_loop(
 
         match response.result {
             LlmOutput::Text(text) => {
-                println!(
-                    "  💬 LLM returned text: {}",
-                    &text[..text.len().min(100)]
-                );
+                println!("  💬 LLM returned text: {}", truncate_str(&text, 100));
                 return Ok(LoopOutcome::Response(text));
             }
 
@@ -100,7 +97,7 @@ pub async fn run_agentic_loop(
                         Ok(output) => println!(
                             "  ✅ Tool '{}' succeeded: {}",
                             tc.name,
-                            &output[..output.len().min(80)]
+                            truncate_str(output, 80)
                         ),
                         Err(e) => println!("  ❌ Tool '{}' failed: {}", tc.name, e),
                     }
@@ -112,4 +109,19 @@ pub async fn run_agentic_loop(
     }
 
     Ok(LoopOutcome::MaxIterations)
+}
+
+/// Safely truncate a string to at most `max_bytes` bytes without splitting
+/// a multi-byte UTF-8 character. Returns the truncated slice with "[...]" appended
+/// if truncation occurred.
+fn truncate_str(s: &str, max_bytes: usize) -> String {
+    if s.len() <= max_bytes {
+        return s.to_string();
+    }
+    // Walk backwards from max_bytes to find a valid char boundary
+    let mut end = max_bytes;
+    while end > 0 && !s.is_char_boundary(end) {
+        end -= 1;
+    }
+    format!("{}[...]", &s[..end])
 }
