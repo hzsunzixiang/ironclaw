@@ -1,4 +1,3 @@
-
 //! # LLM Provider Trait
 //!
 //! Corresponds to: `src/llm/provider.rs` → `trait LlmProvider` in IronClaw.

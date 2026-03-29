@@ -1,4 +1,3 @@
-
 //! # Tool Trait, Registry & Execution Pipeline
 //!
 //! Corresponds to: `src/tools/tool.rs` + `src/tools/execute.rs` + `src/tools/registry.rs`
@@ -57,13 +56,14 @@ pub trait Tool: Send + Sync {
 ///
 /// In IronClaw, ToolRegistry uses RwLock<HashMap> and supports
 /// dynamic registration/deregistration of tools at runtime.
+#[derive(Default)]
 pub struct ToolRegistry {
     tools: Vec<Box<dyn Tool>>,
 }
 
 impl ToolRegistry {
     pub fn new() -> Self {
-        Self { tools: Vec::new() }
+        Self::default()
     }
 
     pub fn register(&mut self, tool: Box<dyn Tool>) {
@@ -71,15 +71,21 @@ impl ToolRegistry {
     }
 
     pub fn get(&self, name: &str) -> Option<&dyn Tool> {
-        self.tools.iter().find(|t| t.name() == name).map(|t| t.as_ref())
+        self.tools
+            .iter()
+            .find(|t| t.name() == name)
+            .map(|t| t.as_ref())
     }
 
     pub fn definitions(&self) -> Vec<ToolDefinition> {
-        self.tools.iter().map(|t| ToolDefinition {
-            name: t.name().to_string(),
-            description: t.description().to_string(),
-            parameters: t.parameters_schema(),
-        }).collect()
+        self.tools
+            .iter()
+            .map(|t| ToolDefinition {
+                name: t.name().to_string(),
+                description: t.description().to_string(),
+                parameters: t.parameters_schema(),
+            })
+            .collect()
     }
 }
 
@@ -105,10 +111,14 @@ pub async fn execute_tool_with_safety(
     params: serde_json::Value,
 ) -> Result<String, String> {
     // Step 1: Lookup
-    let tool = registry.get(tool_name)
+    let tool = registry
+        .get(tool_name)
         .ok_or_else(|| format!("Tool '{}' not found", tool_name))?;
 
-    println!("  ⚙️  Executing tool: {} with params: {}", tool_name, params);
+    println!(
+        "  ⚙️  Executing tool: {} with params: {}",
+        tool_name, params
+    );
 
     // Step 2: Execute with timeout (IronClaw uses per-tool timeout, default 60s)
     let timeout = Duration::from_secs(30);
@@ -121,7 +131,10 @@ pub async fn execute_tool_with_safety(
                 .map_err(|e| format!("Failed to serialize result: {}", e))
         }
         Ok(Err(e)) => Err(format!("Tool execution failed: {}", e)),
-        Err(_) => Err(format!("Tool '{}' timed out after {:?}", tool_name, timeout)),
+        Err(_) => Err(format!(
+            "Tool '{}' timed out after {:?}",
+            tool_name, timeout
+        )),
     }
 }
 
@@ -131,6 +144,7 @@ pub async fn execute_tool_with_safety(
 /// In IronClaw, this also:
 ///   1. safety.sanitize_tool_output() — remove sensitive data
 ///   2. safety.wrap_for_llm() — wrap in <tool_output> XML tags
+///
 /// We skip sanitization and wrapping for simplicity.
 pub fn process_tool_result(
     tool_name: &str,

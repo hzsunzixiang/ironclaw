@@ -1,4 +1,3 @@
-
 //! # Calculator Tool — Example Builtin Tool
 //!
 //! In IronClaw, tools can be:
@@ -16,7 +15,9 @@ pub struct CalculatorTool;
 
 #[async_trait]
 impl Tool for CalculatorTool {
-    fn name(&self) -> &str { "calculator" }
+    fn name(&self) -> &str {
+        "calculator"
+    }
 
     fn description(&self) -> &str {
         "Perform basic arithmetic operations. Supports: add, sub, mul, div."

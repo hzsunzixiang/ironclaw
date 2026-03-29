@@ -64,7 +64,6 @@ async fn main() {
     println!("║    • \"Hello\" (direct response, no tool)                    ║");
     println!("║    • \"/model <name>\" to switch model (ds, qwen, kimi...)   ║");
     println!("║    • \"/models\" to list available models                    ║");
-
     println!("║    • \"quit\" to exit                                        ║");
     println!("║                                                            ║");
     println!("╚══════════════════════════════════════════════════════════════╝");
@@ -72,7 +71,7 @@ async fn main() {
 
     // ── Setup (corresponds to Agent::new() in IronClaw) ──
 
-    // 1. Create LLM provider from ~/HAI_WOA.json config
+    // 1. Create LLM provider from ./HAI_WOA.json config
     let hai_config = HaiConfig::load().unwrap_or_else(|e| {
         eprintln!("❌ Failed to load ./HAI_WOA.json: {}", e);
         eprintln!("   Please copy HAI_WOA.template.json to HAI_WOA.json and fill in your API key.");
@@ -82,9 +81,15 @@ async fn main() {
     println!("✅ Loaded config from ./HAI_WOA.json");
     println!("   Model: {}", hai_config.model);
     println!("   Base URL: {}", hai_config.base_url().unwrap_or_default());
-    println!("   Available shortcuts: {}", hai_config.list_models().iter()
-        .map(|(k, v)| format!("{} → {}", k, v))
-        .collect::<Vec<_>>().join(", "));
+    println!(
+        "   Available shortcuts: {}",
+        hai_config
+            .list_models()
+            .iter()
+            .map(|(k, v)| format!("{} → {}", k, v))
+            .collect::<Vec<_>>()
+            .join(", ")
+    );
 
     let mut current_model = hai_config.resolve_model(None);
 
@@ -96,8 +101,8 @@ async fn main() {
         )))
     };
 
-    let mut llm: Box<dyn LlmProvider> = make_provider(&current_model, &hai_config)
-        .unwrap_or_else(|e| {
+    let mut llm: Box<dyn LlmProvider> =
+        make_provider(&current_model, &hai_config).unwrap_or_else(|e| {
             eprintln!("❌ Failed to create LLM provider: {}", e);
             std::process::exit(1);
         });
@@ -110,7 +115,7 @@ async fn main() {
 
     // 3. Helper to build system prompt with current model identity
     let make_system_prompt = |model: &str| -> ChatMessage {
-        ChatMessage::system(&format!(
+        ChatMessage::system(format!(
             "You are a helpful assistant powered by the {} model. \
              You have access to a calculator tool. \
              When the user asks a math question, use the calculator tool to compute the answer. \
@@ -132,7 +137,7 @@ async fn main() {
 
         let mut input = String::new();
         match io::stdin().read_line(&mut input) {
-            Ok(0) => break,  // EOF reached
+            Ok(0) => break, // EOF reached
             Err(_) => break,
             _ => {}
         }
@@ -151,7 +156,11 @@ async fn main() {
             println!("\n📋 Available models:");
             println!("   (default) → {}", hai_config.model);
             for (shortcut, model_id) in hai_config.list_models() {
-                let marker = if current_model == model_id { " ← current" } else { "" };
+                let marker = if current_model == model_id {
+                    " ← current"
+                } else {
+                    ""
+                };
                 println!("   {} → {}{}", shortcut, model_id, marker);
             }
             println!("   Current: {}", current_model);
@@ -172,10 +181,7 @@ async fn main() {
         }
 
         // ── Build conversation context ──
-        let mut messages = vec![
-            make_system_prompt(&current_model),
-            ChatMessage::user(input),
-        ];
+        let mut messages = vec![make_system_prompt(&current_model), ChatMessage::user(input)];
 
         // ── Run the agentic loop ──
         println!("\n🤖 Agent thinking...");

@@ -1,7 +1,6 @@
-
 //! # Real OpenAI-Compatible LLM Provider
 //!
-//! Reads configuration from ~/HAI_WOA.json and calls a real LLM API.
+//! Reads configuration from ./HAI_WOA.json and calls a real LLM API.
 //! Supports any OpenAI-compatible endpoint (HaiHub, OpenRouter, etc.)
 
 use async_trait::async_trait;
@@ -9,16 +8,14 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::Duration;
 
-use super::{
-    ChatMessage, FinishReason, LlmOutput, LlmResponse, Role, ToolCall, ToolDefinition,
-};
 use super::provider::LlmProvider;
+use super::{ChatMessage, FinishReason, LlmOutput, LlmResponse, Role, ToolCall, ToolDefinition};
 
 // ============================================================================
-// HaiConfig — Configuration from ~/HAI_WOA.json
+// HaiConfig — Configuration from ./HAI_WOA.json
 // ============================================================================
 
-/// Configuration loaded from ~/HAI_WOA.json
+/// Configuration loaded from ./HAI_WOA.json
 #[derive(Debug, Deserialize)]
 pub struct HaiConfig {
     /// Default model ID (e.g. "openai/DeepSeek-V3-0324")
@@ -48,13 +45,15 @@ impl HaiConfig {
     }
 
     pub fn api_key(&self) -> Result<String, String> {
-        self.env.get("OPENAI_API_KEY")
+        self.env
+            .get("OPENAI_API_KEY")
             .cloned()
             .ok_or_else(|| "OPENAI_API_KEY not found in HAI_WOA.json env".to_string())
     }
 
     pub fn base_url(&self) -> Result<String, String> {
-        self.env.get("OPENAI_BASE_URL")
+        self.env
+            .get("OPENAI_BASE_URL")
             .cloned()
             .ok_or_else(|| "OPENAI_BASE_URL not found in HAI_WOA.json env".to_string())
     }
@@ -78,7 +77,9 @@ impl HaiConfig {
 
     /// List available model shortcuts
     pub fn list_models(&self) -> Vec<(&str, &str)> {
-        let mut models: Vec<_> = self.models.iter()
+        let mut models: Vec<_> = self
+            .models
+            .iter()
             .map(|(k, v)| (k.as_str(), v.id.as_str()))
             .collect();
         models.sort_by_key(|(k, _)| *k);
@@ -105,7 +106,12 @@ impl OpenAiCompatibleProvider {
             .timeout(Duration::from_secs(120))
             .build()
             .unwrap_or_default();
-        Self { client, api_key, base_url, model }
+        Self {
+            client,
+            api_key,
+            base_url,
+            model,
+        }
     }
 }
 
@@ -126,7 +132,8 @@ struct OpenAiRequest {
 #[derive(Serialize)]
 struct OpenAiMessage {
     role: String,
-    content: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    content: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     tool_call_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -203,43 +210,55 @@ struct OpenAiFunctionIn {
 impl OpenAiCompatibleProvider {
     /// Convert our ChatMessage list to OpenAI format
     fn convert_messages(messages: &[ChatMessage]) -> Vec<OpenAiMessage> {
-        messages.iter().map(|m| {
-            let role = match m.role {
-                Role::System => "system",
-                Role::User => "user",
-                Role::Assistant => "assistant",
-                Role::Tool => "tool",
-            };
-            let tool_calls_out = m.tool_calls.as_ref().map(|tcs| {
-                tcs.iter().map(|tc| OpenAiToolCallOut {
-                    id: tc.id.clone(),
-                    call_type: "function".to_string(),
-                    function: OpenAiFunctionCallOut {
-                        name: tc.name.clone(),
-                        arguments: serde_json::to_string(&tc.arguments).unwrap_or_default(),
+        messages
+            .iter()
+            .map(|m| {
+                let role = match m.role {
+                    Role::System => "system",
+                    Role::User => "user",
+                    Role::Assistant => "assistant",
+                    Role::Tool => "tool",
+                };
+                let tool_calls_out = m.tool_calls.as_ref().map(|tcs| {
+                    tcs.iter()
+                        .map(|tc| OpenAiToolCallOut {
+                            id: tc.id.clone(),
+                            call_type: "function".to_string(),
+                            function: OpenAiFunctionCallOut {
+                                name: tc.name.clone(),
+                                arguments: serde_json::to_string(&tc.arguments).unwrap_or_default(),
+                            },
+                        })
+                        .collect()
+                });
+                OpenAiMessage {
+                    role: role.to_string(),
+                    content: if m.content.is_empty() {
+                        None
+                    } else {
+                        Some(m.content.clone())
                     },
-                }).collect()
-            });
-            OpenAiMessage {
-                role: role.to_string(),
-                content: m.content.clone(),
-                tool_call_id: m.tool_call_id.clone(),
-                name: m.name.clone(),
-                tool_calls: tool_calls_out,
-            }
-        }).collect()
+                    tool_call_id: m.tool_call_id.clone(),
+                    name: m.name.clone(),
+                    tool_calls: tool_calls_out,
+                }
+            })
+            .collect()
     }
 
     /// Convert our ToolDefinition list to OpenAI format
     fn convert_tools(tools: &[ToolDefinition]) -> Vec<OpenAiTool> {
-        tools.iter().map(|t| OpenAiTool {
-            tool_type: "function".to_string(),
-            function: OpenAiFunction {
-                name: t.name.clone(),
-                description: t.description.clone(),
-                parameters: t.parameters.clone(),
-            },
-        }).collect()
+        tools
+            .iter()
+            .map(|t| OpenAiTool {
+                tool_type: "function".to_string(),
+                function: OpenAiFunction {
+                    name: t.name.clone(),
+                    description: t.description.clone(),
+                    parameters: t.parameters.clone(),
+                },
+            })
+            .collect()
     }
 }
 
@@ -261,10 +280,15 @@ impl LlmProvider for OpenAiCompatibleProvider {
             model: self.model.clone(),
             messages: Self::convert_messages(messages),
             tools: openai_tools,
-            tool_choice: if tools.is_empty() { None } else { Some("auto".to_string()) },
+            tool_choice: if tools.is_empty() {
+                None
+            } else {
+                Some("auto".to_string())
+            },
         };
 
-        let resp = self.client
+        let resp = self
+            .client
             .post(&url)
             .header("Authorization", format!("Bearer {}", self.api_key))
             .header("Content-Type", "application/json")
@@ -279,10 +303,15 @@ impl LlmProvider for OpenAiCompatibleProvider {
             return Err(format!("API returned {}: {}", status, error_body));
         }
 
-        let openai_resp: OpenAiResponse = resp.json().await
+        let openai_resp: OpenAiResponse = resp
+            .json()
+            .await
             .map_err(|e| format!("Failed to parse response: {}", e))?;
 
-        let choice = openai_resp.choices.into_iter().next()
+        let choice = openai_resp
+            .choices
+            .into_iter()
+            .next()
             .ok_or("No choices in response")?;
 
         let finish = match choice.finish_reason.as_deref() {
@@ -295,15 +324,19 @@ impl LlmProvider for OpenAiCompatibleProvider {
         // Check if there are tool calls
         if let Some(tool_calls_in) = choice.message.tool_calls {
             if !tool_calls_in.is_empty() {
-                let tool_calls: Vec<ToolCall> = tool_calls_in.into_iter().map(|tc| {
-                    let arguments: serde_json::Value = serde_json::from_str(&tc.function.arguments)
-                        .unwrap_or(serde_json::Value::Object(serde_json::Map::new()));
-                    ToolCall {
-                        id: tc.id,
-                        name: tc.function.name,
-                        arguments,
-                    }
-                }).collect();
+                let tool_calls: Vec<ToolCall> = tool_calls_in
+                    .into_iter()
+                    .map(|tc| {
+                        let arguments: serde_json::Value =
+                            serde_json::from_str(&tc.function.arguments)
+                                .unwrap_or(serde_json::Value::Object(serde_json::Map::new()));
+                        ToolCall {
+                            id: tc.id,
+                            name: tc.function.name,
+                            arguments,
+                        }
+                    })
+                    .collect();
 
                 return Ok(LlmResponse {
                     result: LlmOutput::ToolCalls {

@@ -1,4 +1,3 @@
-
 //! # LLM Types & Provider
 //!
 //! Corresponds to: `src/llm/provider.rs` in IronClaw.
@@ -46,13 +45,31 @@ pub struct ChatMessage {
 
 impl ChatMessage {
     pub fn system(content: impl Into<String>) -> Self {
-        Self { role: Role::System, content: content.into(), tool_call_id: None, name: None, tool_calls: None }
+        Self {
+            role: Role::System,
+            content: content.into(),
+            tool_call_id: None,
+            name: None,
+            tool_calls: None,
+        }
     }
     pub fn user(content: impl Into<String>) -> Self {
-        Self { role: Role::User, content: content.into(), tool_call_id: None, name: None, tool_calls: None }
+        Self {
+            role: Role::User,
+            content: content.into(),
+            tool_call_id: None,
+            name: None,
+            tool_calls: None,
+        }
     }
     pub fn assistant(content: impl Into<String>) -> Self {
-        Self { role: Role::Assistant, content: content.into(), tool_call_id: None, name: None, tool_calls: None }
+        Self {
+            role: Role::Assistant,
+            content: content.into(),
+            tool_call_id: None,
+            name: None,
+            tool_calls: None,
+        }
     }
     pub fn assistant_with_tool_calls(content: Option<String>, tool_calls: Vec<ToolCall>) -> Self {
         Self {
@@ -60,10 +77,18 @@ impl ChatMessage {
             content: content.unwrap_or_default(),
             tool_call_id: None,
             name: None,
-            tool_calls: if tool_calls.is_empty() { None } else { Some(tool_calls) },
+            tool_calls: if tool_calls.is_empty() {
+                None
+            } else {
+                Some(tool_calls)
+            },
         }
     }
-    pub fn tool_result(call_id: impl Into<String>, name: impl Into<String>, content: impl Into<String>) -> Self {
+    pub fn tool_result(
+        call_id: impl Into<String>,
+        name: impl Into<String>,
+        content: impl Into<String>,
+    ) -> Self {
         Self {
             role: Role::Tool,
             content: content.into(),
@@ -96,9 +121,9 @@ pub struct ToolDefinition {
 /// Maps to: `src/llm/provider.rs` → `enum FinishReason`
 #[derive(Debug, Clone, PartialEq)]
 pub enum FinishReason {
-    Stop,     // Normal completion
-    ToolUse,  // LLM wants to call a tool
-    Length,   // Hit token limit (response truncated)
+    Stop,    // Normal completion
+    ToolUse, // LLM wants to call a tool
+    Length,  // Hit token limit (response truncated)
 }
 
 /// Result from the LLM — either text or tool calls.

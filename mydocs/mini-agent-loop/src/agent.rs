@@ -1,4 +1,3 @@
-
 //! # Agentic Loop — The Core Engine
 //!
 //! Corresponds to: `src/agent/agentic_loop.rs` in IronClaw.
@@ -16,9 +15,7 @@
 //!
 //! Here we inline a simplified version without the delegate pattern.
 
-use crate::llm::{
-    ChatMessage, FinishReason, LlmOutput, LlmProvider,
-};
+use crate::llm::{ChatMessage, FinishReason, LlmOutput, LlmProvider};
 use crate::tools::{execute_tool_with_safety, process_tool_result, ToolRegistry};
 
 /// Configuration for the agentic loop.
@@ -29,7 +26,7 @@ pub struct AgenticLoopConfig {
 
 impl Default for AgenticLoopConfig {
     fn default() -> Self {
-        Self { max_iterations: 10 }  // IronClaw default is 50
+        Self { max_iterations: 10 } // IronClaw default is 50
     }
 }
 
@@ -69,7 +66,10 @@ pub async fn run_agentic_loop(
     let tool_defs = registry.definitions();
 
     for iteration in 1..=config.max_iterations {
-        println!("\n--- Iteration {}/{} ---", iteration, config.max_iterations);
+        println!(
+            "\n--- Iteration {}/{} ---",
+            iteration, config.max_iterations
+        );
 
         // ── Step 1: Call LLM ──
         let response = llm.chat(messages, &tool_defs).await?;
@@ -82,7 +82,10 @@ pub async fn run_agentic_loop(
             }
 
             // ── Step 2b: Tool Calls ──
-            LlmOutput::ToolCalls { tool_calls, content } => {
+            LlmOutput::ToolCalls {
+                tool_calls,
+                content,
+            } => {
                 println!("  🔧 LLM wants to call {} tool(s)", tool_calls.len());
 
                 // Handle truncated responses
@@ -92,7 +95,7 @@ pub async fn run_agentic_loop(
                         messages.push(ChatMessage::assistant(&text));
                     }
                     messages.push(ChatMessage::user(
-                        "Your previous response was truncated. Please try a simpler approach."
+                        "Your previous response was truncated. Please try a simpler approach.",
                     ));
                     continue;
                 }
@@ -106,13 +109,17 @@ pub async fn run_agentic_loop(
 
                 // Execute each tool and add results to context
                 for tc in &tool_calls {
-                    let result = execute_tool_with_safety(registry, &tc.name, tc.arguments.clone()).await;
+                    let result =
+                        execute_tool_with_safety(registry, &tc.name, tc.arguments.clone()).await;
 
                     let result_msg = process_tool_result(&tc.name, &tc.id, &result);
 
                     match &result {
-                    Ok(output) => println!("  ✅ Tool '{}' succeeded: {}",
-                            tc.name, truncate_str(output, 80)),
+                        Ok(output) => println!(
+                            "  ✅ Tool '{}' succeeded: {}",
+                            tc.name,
+                            truncate_str(output, 80)
+                        ),
                         Err(e) => println!("  ❌ Tool '{}' failed: {}", tc.name, e),
                     }
 

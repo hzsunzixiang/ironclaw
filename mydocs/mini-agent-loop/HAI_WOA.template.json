@@ -20,8 +20,5 @@
   "env": {
     "OPENAI_API_KEY": "<your-api-key-here>",
     "OPENAI_BASE_URL": "http://api.haihub.cn/v1"
-  },
-  "openai": {
-    "useChatCompletions": true
   }
 }
