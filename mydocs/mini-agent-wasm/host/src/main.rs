@@ -1,65 +1,76 @@
-
-//! # Mini Agent Loop — IronClaw Core Distilled
+//! # Mini Agent Loop with WASM Sandbox — IronClaw Core Distilled
 //!
-//! This is a minimal, standalone extraction of IronClaw's agentic loop.
-//! It demonstrates the complete message flow:
+//! This builds on mini-agent-loop by adding WASM sandbox execution for tools.
+//! Instead of tools being native Rust code, they run inside a Wasmtime WASM sandbox.
 //!
 //! ```text
-//! stdin → Agentic Loop → LLM → Tool Execute → Response → stdout
+//! stdin → Agentic Loop → LLM → WASM Sandbox Tool Execute → Response → stdout
 //! ```
 //!
-//! ## What's included (mapped to IronClaw source files):
+//! ## Architecture
 //!
-//! | This file section       | IronClaw source                          | Purpose                        |
-//! |-------------------------|------------------------------------------|--------------------------------|
-//! | `LlmProvider` trait     | `src/llm/provider.rs`                    | LLM abstraction                |
-//! | `Tool` trait            | `src/tools/tool.rs`                      | Tool abstraction               |
-//! | `LoopDelegate` trait    | `src/agent/agentic_loop.rs`              | Strategy pattern for the loop  |
-//! | `run_agentic_loop()`    | `src/agent/agentic_loop.rs`              | The core loop engine           |
-//! | `execute_tool_with_safety()` | `src/tools/execute.rs`              | Tool execution pipeline        |
-//! | `CalculatorTool`        | (like any builtin tool)                  | Example tool                   |
-//! | `MockLlmProvider`       | (replaces real OpenAI/Claude provider)   | Simulated LLM for demo         |
-//! | `main()`                | (replaces Channel + Agent::run())        | stdin-based entry point        |
+//! ```text
+//! ┌─────────────────────────────────────────────────────────────────┐
+//! │                        Host Process                             │
+//! │                                                                 │
+//! │  ┌──────────┐    ┌──────────┐    ┌──────────────────────────┐  │
+//! │  │  stdin    │───▶│  Agent   │───▶│  LLM (DeepSeek/Qwen)    │  │
+//! │  │  stdout   │◀──│  Loop    │◀──│  via ~/HAI_WOA.json      │  │
+//! │  └──────────┘    └────┬─────┘    └──────────────────────────┘  │
+//! │                       │                                         │
+//! │                       │ tool_call(calculator, params)           │
+//! │                       ▼                                         │
+//! │  ┌──────────────────────────────────────────────────────────┐  │
+//! │  │              WASM Sandbox (Wasmtime)                      │  │
+//! │  │  ┌────────────────────────────────────────────────────┐  │  │
+//! │  │  │  Guest Tool (.wasm)                                │  │  │
+//! │  │  │                                                    │  │  │
+//! │  │  │  • Can ONLY call host::log() and host::now_millis()│  │  │
+//! │  │  │  • Cannot access filesystem, network, env vars     │  │  │
+//! │  │  │  • Fuel-limited (prevents infinite loops)          │  │  │
+//! │  │  │  • Fresh instance per execution (no state leak)    │  │  │
+//! │  │  └────────────────────────────────────────────────────┘  │  │
+//! │  └──────────────────────────────────────────────────────────┘  │
+//! └─────────────────────────────────────────────────────────────────┘
+//! ```
 //!
-//! ## What's intentionally omitted:
+//! ## What's different from mini-agent-loop:
 //!
-//! - Channel layer (replaced by stdin/stdout)
-//! - Session/Thread/Turn management (single-turn only)
-//! - WASM sandbox (tools are native Rust)
-//! - Database persistence
-//! - Safety/sanitization layer
-//! - Approval flow
-//! - Hooks system
+//! | mini-agent-loop                | mini-agent-wasm                          |
+//! |-------------------------------|------------------------------------------|
+//! | `CalculatorTool` is native Rust | `CalculatorTool` runs in WASM sandbox  |
+//! | `Tool` trait with `execute()`  | `WasmTool` wraps Wasmtime component     |
+//! | No isolation                   | Full sandbox: fuel, no FS/net, log only |
+//! | Single binary                  | host binary + guest .wasm component     |
 //!
 //! ## How to run:
 //!
 //! ```bash
-//! cargo run
-//! ```
+//! # 1. Build the guest WASM tool
+//! cd guest && cargo build --target wasm32-wasip2 --release && cd ..
 //!
-//! Then type messages like:
-//! - "What is 42 + 58?"
-//! - "Calculate 100 divided by 3"
-//! - "Hello, how are you?"
-//! - Type "quit" to exit
+//! # 2. Run the host (agent loop + WASM sandbox)
+//! cd host && cargo run --release
+//! ```
 
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::io::{self, Write};
-use std::time::Duration;
+use std::sync::Arc;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
+
+use wasmtime::component::Linker;
+use wasmtime::{Config, Engine, Store};
+use wasmtime_wasi::{ResourceTable, WasiCtx, WasiCtxBuilder, WasiView};
 
 // ============================================================================
 // PART 1: LLM Types & Provider Trait
 // ============================================================================
-// Corresponds to: src/llm/provider.rs
-//
-// In IronClaw, LlmProvider is a trait with implementations for OpenAI,
-// Anthropic, Mistral, etc. Here we define the minimal types needed.
+// Same as mini-agent-loop — the LLM layer is unchanged.
+// The WASM sandbox only affects the tool execution layer.
 // ============================================================================
 
-/// Role in a conversation message.
-/// Maps to: `src/llm/provider.rs` → `enum Role`
 #[derive(Debug, Clone, PartialEq)]
 pub enum Role {
     System,
@@ -68,21 +79,12 @@ pub enum Role {
     Tool,
 }
 
-/// A message in the conversation context.
-/// Maps to: `src/llm/provider.rs` → `struct ChatMessage`
-///
-/// In IronClaw, ChatMessage also supports multimodal content (images),
-/// tool_calls on assistant messages, and tool_call_id on tool results.
-/// We keep only what the loop needs.
 #[derive(Debug, Clone)]
 pub struct ChatMessage {
     pub role: Role,
     pub content: String,
-    /// Tool call ID — set when role == Tool (links result to a specific call)
     pub tool_call_id: Option<String>,
-    /// Tool name — set when role == Tool
     pub name: Option<String>,
-    /// Tool calls — set when role == Assistant and LLM wants to call tools
     pub tool_calls: Option<Vec<ToolCall>>,
 }
 
@@ -92,9 +94,6 @@ impl ChatMessage {
     }
     pub fn user(content: impl Into<String>) -> Self {
         Self { role: Role::User, content: content.into(), tool_call_id: None, name: None, tool_calls: None }
-    }
-    pub fn assistant(content: impl Into<String>) -> Self {
-        Self { role: Role::Assistant, content: content.into(), tool_call_id: None, name: None, tool_calls: None }
     }
     pub fn assistant_with_tool_calls(content: Option<String>, tool_calls: Vec<ToolCall>) -> Self {
         Self {
@@ -116,8 +115,6 @@ impl ChatMessage {
     }
 }
 
-/// A tool call requested by the LLM.
-/// Maps to: `src/llm/provider.rs` → `struct ToolCall`
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ToolCall {
     pub id: String,
@@ -125,8 +122,6 @@ pub struct ToolCall {
     pub arguments: serde_json::Value,
 }
 
-/// Definition of a tool for the LLM (sent in the request so LLM knows what's available).
-/// Maps to: `src/llm/provider.rs` → `struct ToolDefinition`
 #[derive(Debug, Clone)]
 pub struct ToolDefinition {
     pub name: String,
@@ -134,48 +129,30 @@ pub struct ToolDefinition {
     pub parameters: serde_json::Value,
 }
 
-/// Why the LLM stopped generating.
-/// Maps to: `src/llm/provider.rs` → `enum FinishReason`
 #[derive(Debug, Clone, PartialEq)]
 pub enum FinishReason {
-    Stop,     // Normal completion
-    ToolUse,  // LLM wants to call a tool
-    Length,   // Hit token limit (response truncated)
+    Stop,
+    ToolUse,
+    Length,
 }
 
-/// Result from the LLM — either text or tool calls.
-/// Maps to: `src/llm/reasoning.rs` → `enum RespondResult`
-///
-/// In IronClaw, this is wrapped in `RespondOutput` which also carries
-/// token usage stats. We simplify.
 #[derive(Debug)]
 pub enum LlmOutput {
-    /// LLM returned a text response (conversation continues or ends)
     Text(String),
-    /// LLM wants to call one or more tools
     ToolCalls {
         tool_calls: Vec<ToolCall>,
-        /// Optional text content alongside tool calls
         content: Option<String>,
     },
 }
 
-/// The LLM response including metadata.
 #[derive(Debug)]
 pub struct LlmResponse {
     pub result: LlmOutput,
     pub finish_reason: FinishReason,
 }
 
-/// Trait for LLM providers.
-/// Maps to: `src/llm/provider.rs` → `trait LlmProvider`
-///
-/// In IronClaw, this has `complete()` and `complete_with_tools()` methods,
-/// plus cost tracking, model switching, etc. We merge into one method.
 #[async_trait]
 pub trait LlmProvider: Send + Sync {
-    /// Call the LLM with messages and available tools.
-    /// Returns either a text response or tool call requests.
     async fn chat(
         &self,
         messages: &[ChatMessage],
@@ -184,38 +161,34 @@ pub trait LlmProvider: Send + Sync {
 }
 
 // ============================================================================
-// PART 2: Tool Trait & Execution Pipeline
+// PART 2: Tool Trait & WASM Sandbox Execution
 // ============================================================================
-// Corresponds to: src/tools/tool.rs + src/tools/execute.rs
+// THIS IS THE KEY DIFFERENCE from mini-agent-loop.
 //
-// In IronClaw, Tool is a rich trait with approval, rate limiting, risk levels,
-// WASM support, etc. Here we keep only: name, description, schema, execute.
+// In mini-agent-loop: Tool trait → native Rust execute()
+// Here:              Tool trait → WasmTool → Wasmtime sandbox → guest .wasm
 //
-// The execution pipeline in IronClaw goes through:
-//   lookup → normalize params → validate → timeout → execute → serialize
-// We simplify to: lookup → timeout → execute → serialize
+// The execution pipeline becomes:
+//   1. LLM returns tool_call(calculator, params)
+//   2. execute_tool_with_safety() looks up the tool
+//   3. WasmTool::execute() creates a fresh WASM Store
+//   4. Guest .wasm runs in sandbox with fuel limit
+//   5. Guest can ONLY call host::log() and host::now_millis()
+//   6. Result comes back through the WIT interface
+//
+// This maps to IronClaw's:
+//   src/tools/execute.rs → execute_tool_with_safety()
+//   src/wasm/sandbox.rs  → WasmSandbox::execute()
 // ============================================================================
 
 /// Output from a tool execution.
-/// Maps to: `src/tools/tool.rs` → `struct ToolOutput`
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ToolOutput {
     pub result: serde_json::Value,
 }
 
 /// Trait for tools that the agent can use.
-/// Maps to: `src/tools/tool.rs` → `trait Tool`
-///
-/// In IronClaw, this trait has ~15 methods including:
-/// - requires_approval() → approval flow
-/// - risk_level_for() → risk classification
-/// - execution_timeout() → per-tool timeout
-/// - domain() → Orchestrator vs Container
-/// - sensitive_params() → parameter redaction
-/// - rate_limit_config() → rate limiting
-/// - webhook_capability() → webhook support
-///
-/// We keep only the essential 4.
+/// Both native and WASM tools implement this trait.
 #[async_trait]
 pub trait Tool: Send + Sync {
     fn name(&self) -> &str;
@@ -224,11 +197,7 @@ pub trait Tool: Send + Sync {
     async fn execute(&self, params: serde_json::Value) -> Result<ToolOutput, String>;
 }
 
-/// Simple tool registry.
-/// Maps to: `src/tools/registry.rs` → `struct ToolRegistry`
-///
-/// In IronClaw, ToolRegistry uses RwLock<HashMap> and supports
-/// dynamic registration/deregistration of tools at runtime.
+/// Tool registry — holds all available tools.
 pub struct ToolRegistry {
     tools: Vec<Box<dyn Tool>>,
 }
@@ -255,36 +224,270 @@ impl ToolRegistry {
     }
 }
 
+// ════════════════════════════════════════════════════════════════════
+// WASM Sandbox Infrastructure
+// ════════════════════════════════════════════════════════════════════
+// This section implements the WASM sandbox that tools run inside.
+//
+// Key components:
+//   1. WIT bindings (generated by wasmtime::component::bindgen!)
+//   2. StoreData — per-execution state (logs, WASI context)
+//   3. Host trait impl — what the guest can call (log, now_millis)
+//   4. WasmToolEngine — shared engine + compiled component
+//   5. WasmTool — implements Tool trait using the sandbox
+// ════════════════════════════════════════════════════════════════════
+
+// Step 1: Generate host-side bindings from the WIT file.
+//
+// This macro reads the WIT and generates:
+//   - `demo::sandbox::host::Host` trait (we must implement)
+//   - `demo::sandbox::host::add_to_linker()` function
+//   - `SandboxedTool` struct with `instantiate()` to create guest instances
+//   - `exports::demo::sandbox::tool::*` types for calling guest functions
+wasmtime::component::bindgen!({
+    path: "../wit/tool.wit",
+    world: "sandboxed-tool",
+    async: false,
+    with: {},
+});
+
+// Step 2: Per-execution state.
+//
+// Each tool execution gets a FRESH Store — this is the "fresh instance
+// per execution" pattern, ensuring complete isolation between runs.
+// No state leaks from one execution to the next.
+struct StoreData {
+    wasi: WasiCtx,
+    table: ResourceTable,
+    /// Collected log messages from the guest
+    logs: Vec<(String, String)>,
+}
+
+impl WasiView for StoreData {
+    fn ctx(&mut self) -> &mut WasiCtx {
+        &mut self.wasi
+    }
+    fn table(&mut self) -> &mut ResourceTable {
+        &mut self.table
+    }
+}
+
+// Step 3: Implement the Host trait — THE CORE OF THE SANDBOX.
+//
+// When the guest calls `host::log(...)` or `host::now_millis()`,
+// execution crosses the WASM boundary and arrives HERE.
+//
+// The host has FULL CONTROL over what these functions do:
+// - log() could write to a file, send to a server, or just collect in memory
+// - now_millis() could return the real time, or a fake time for testing
+// - In IronClaw, http_request() checks an allowlist before making the request
+//
+// The guest has NO WAY to bypass this — it's enforced by the WASM VM.
+impl demo::sandbox::host::Host for StoreData {
+    fn log(&mut self, level: demo::sandbox::host::LogLevel, message: String) {
+        let level_str = match level {
+            demo::sandbox::host::LogLevel::Info => "INFO",
+            demo::sandbox::host::LogLevel::Warn => "WARN",
+            demo::sandbox::host::LogLevel::Error => "ERROR",
+        };
+        println!("    📋 [WASM LOG] [{level_str}] {message}");
+        self.logs.push((level_str.to_string(), message));
+    }
+
+    fn now_millis(&mut self) -> u64 {
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|d| d.as_millis() as u64)
+            .unwrap_or(0)
+    }
+}
+
+// Step 4: Shared WASM engine + compiled component.
+//
+// The Engine and compiled Component are expensive to create but can be
+// reused across executions. Only the Store (per-execution state) is fresh.
+struct WasmToolEngine {
+    engine: Engine,
+    component: wasmtime::component::Component,
+    /// Tool metadata (cached from first instantiation)
+    tool_name: String,
+    tool_description: String,
+    tool_schema: serde_json::Value,
+    /// Fuel limit per execution
+    fuel_limit: u64,
+}
+
+impl WasmToolEngine {
+    /// Create a new WASM tool engine from a .wasm file.
+    ///
+    /// This:
+    /// 1. Creates a Wasmtime engine with component model + fuel metering
+    /// 2. Compiles the WASM bytes to native code
+    /// 3. Instantiates once to read tool metadata (name, description, schema)
+    fn new(wasm_path: &str, tool_name: &str, fuel_limit: u64) -> Result<Self, String> {
+        // Create engine with component model and fuel metering
+        let mut config = Config::new();
+        config.wasm_component_model(true);
+        config.consume_fuel(true);
+        let engine = Engine::new(&config)
+            .map_err(|e| format!("Failed to create WASM engine: {}", e))?;
+
+        // Load and compile the WASM component
+        let wasm_bytes = std::fs::read(wasm_path)
+            .map_err(|e| format!("Failed to read WASM file '{}': {}", wasm_path, e))?;
+        let component = wasmtime::component::Component::new(&engine, &wasm_bytes)
+            .map_err(|e| format!("Failed to compile WASM component: {}", e))?;
+
+        // Instantiate once to read metadata
+        let mut linker: Linker<StoreData> = Linker::new(&engine);
+        wasmtime_wasi::add_to_linker_sync(&mut linker)
+            .map_err(|e| format!("Failed to add WASI to linker: {}", e))?;
+        demo::sandbox::host::add_to_linker(&mut linker, |state| state)
+            .map_err(|e| format!("Failed to add host functions to linker: {}", e))?;
+
+        let mut store = Store::new(
+            &engine,
+            StoreData {
+                wasi: WasiCtxBuilder::new().build(),
+                table: ResourceTable::new(),
+                logs: Vec::new(),
+            },
+        );
+        store.set_fuel(fuel_limit).map_err(|e| format!("Failed to set fuel: {}", e))?;
+
+        let instance = SandboxedTool::instantiate(&mut store, &component, &linker)
+            .map_err(|e| format!("Failed to instantiate WASM tool: {}", e))?;
+
+        let description = instance.demo_sandbox_tool().call_description(&mut store)
+            .map_err(|e| format!("Failed to call description(): {}", e))?;
+        let schema_str = instance.demo_sandbox_tool().call_schema(&mut store)
+            .map_err(|e| format!("Failed to call schema(): {}", e))?;
+        let schema: serde_json::Value = serde_json::from_str(&schema_str)
+            .map_err(|e| format!("Failed to parse schema JSON: {}", e))?;
+
+        Ok(Self {
+            engine,
+            component,
+            tool_name: tool_name.to_string(),
+            tool_description: description,
+            tool_schema: schema,
+            fuel_limit,
+        })
+    }
+
+    /// Execute the tool in a fresh sandbox.
+    ///
+    /// Each call creates a NEW Store — complete isolation between executions.
+    /// The guest gets a fresh fuel budget and clean state every time.
+    fn execute_in_sandbox(&self, params: &str) -> Result<String, String> {
+        // Fresh linker for this execution
+        let mut linker: Linker<StoreData> = Linker::new(&self.engine);
+        wasmtime_wasi::add_to_linker_sync(&mut linker)
+            .map_err(|e| format!("WASI linker error: {}", e))?;
+        demo::sandbox::host::add_to_linker(&mut linker, |state| state)
+            .map_err(|e| format!("Host linker error: {}", e))?;
+
+        // Fresh store — complete isolation from previous executions
+        let mut store = Store::new(
+            &self.engine,
+            StoreData {
+                wasi: WasiCtxBuilder::new().build(),
+                table: ResourceTable::new(),
+                logs: Vec::new(),
+            },
+        );
+        store.set_fuel(self.fuel_limit).map_err(|e| format!("Fuel error: {}", e))?;
+
+        // Instantiate the guest in the sandbox
+        let instance = SandboxedTool::instantiate(&mut store, &self.component, &linker)
+            .map_err(|e| format!("Instantiation error: {}", e))?;
+
+        // Call the guest's execute() function
+        let request = exports::demo::sandbox::tool::Request {
+            params: params.to_string(),
+        };
+        let response = instance.demo_sandbox_tool().call_execute(&mut store, &request)
+            .map_err(|e| format!("WASM execution error: {}", e))?;
+
+        // Report fuel consumption
+        let remaining = store.get_fuel().unwrap_or(0);
+        let consumed = self.fuel_limit - remaining;
+        println!("    ⛽ Fuel consumed: {} / {} units", consumed, self.fuel_limit);
+
+        // Check response
+        if let Some(error) = response.error {
+            return Err(format!("Tool error: {}", error));
+        }
+        response.output.ok_or_else(|| "Tool returned no output".to_string())
+    }
+}
+
+// Step 5: WasmTool — implements the Tool trait using the WASM sandbox.
+//
+// This is the bridge between the agent loop's Tool abstraction and
+// the WASM sandbox execution. The agent loop doesn't know or care
+// that the tool runs in a sandbox — it just calls execute().
+struct WasmTool {
+    engine: Arc<WasmToolEngine>,
+}
+
+#[async_trait]
+impl Tool for WasmTool {
+    fn name(&self) -> &str {
+        &self.engine.tool_name
+    }
+
+    fn description(&self) -> &str {
+        &self.engine.tool_description
+    }
+
+    fn parameters_schema(&self) -> serde_json::Value {
+        self.engine.tool_schema.clone()
+    }
+
+    async fn execute(&self, params: serde_json::Value) -> Result<ToolOutput, String> {
+        let params_str = serde_json::to_string(&params)
+            .map_err(|e| format!("Failed to serialize params: {}", e))?;
+
+        // Execute in WASM sandbox (synchronous — WASM execution is sync)
+        // We use spawn_blocking to avoid blocking the async runtime
+        let engine = self.engine.clone();
+        let result = tokio::task::spawn_blocking(move || {
+            engine.execute_in_sandbox(&params_str)
+        })
+        .await
+        .map_err(|e| format!("Task join error: {}", e))??;
+
+        // Parse the JSON output from the guest
+        let value: serde_json::Value = serde_json::from_str(&result)
+            .map_err(|e| format!("Failed to parse tool output: {}", e))?;
+
+        Ok(ToolOutput { result: value })
+    }
+}
+
+// ════════════════════════════════════════════════════════════════════
+// Tool Execution Pipeline
+// ════════════════════════════════════════════════════════════════════
+
 /// Execute a tool with timeout.
 /// Maps to: `src/tools/execute.rs` → `execute_tool_with_safety()`
-///
-/// In IronClaw, this function does:
-///   1. tools.get(name) — lookup
-///   2. prepare_tool_params() — normalize (string arrays → real arrays, etc.)
-///   3. safety.validator().validate_tool_params() — injection check
-///   4. redact_params() — log with sensitive params hidden
-///   5. tokio::time::timeout(tool.execution_timeout(), tool.execute()) — execute
-///   6. serde_json::to_string_pretty() — serialize result
-///
-/// We keep: lookup → timeout → execute → serialize
 async fn execute_tool_with_safety(
     registry: &ToolRegistry,
     tool_name: &str,
     params: serde_json::Value,
 ) -> Result<String, String> {
-    // Step 1: Lookup
     let tool = registry.get(tool_name)
         .ok_or_else(|| format!("Tool '{}' not found", tool_name))?;
 
     println!("  ⚙️  Executing tool: {} with params: {}", tool_name, params);
+    println!("    🔒 Running in WASM sandbox...");
 
-    // Step 2: Execute with timeout (IronClaw uses per-tool timeout, default 60s)
     let timeout = Duration::from_secs(30);
     let result = tokio::time::timeout(timeout, tool.execute(params)).await;
 
     match result {
         Ok(Ok(output)) => {
-            // Step 3: Serialize result
             serde_json::to_string_pretty(&output.result)
                 .map_err(|e| format!("Failed to serialize result: {}", e))
         }
@@ -293,13 +496,6 @@ async fn execute_tool_with_safety(
     }
 }
 
-/// Process a tool result into a ChatMessage.
-/// Maps to: `src/tools/execute.rs` → `process_tool_result()`
-///
-/// In IronClaw, this also:
-///   1. safety.sanitize_tool_output() — remove sensitive data
-///   2. safety.wrap_for_llm() — wrap in <tool_output> XML tags
-/// We skip sanitization and wrapping for simplicity.
 fn process_tool_result(
     tool_name: &str,
     tool_call_id: &str,
@@ -315,61 +511,25 @@ fn process_tool_result(
 // ============================================================================
 // PART 3: Agentic Loop — The Core Engine
 // ============================================================================
-// Corresponds to: src/agent/agentic_loop.rs
-//
-// This is the HEART of the system. The loop:
-//   1. Calls LLM with conversation context + available tools
-//   2. If LLM returns text → done (or continue if delegate says so)
-//   3. If LLM returns tool calls → execute tools → add results to context → goto 1
-//   4. Repeat until text response or max iterations
-//
-// In IronClaw, the loop is generic via LoopDelegate trait, serving:
-//   - ChatDelegate (interactive chat)
-//   - JobDelegate (background jobs)
-//   - ContainerDelegate (Docker containers)
-//
-// Here we inline a simplified version without the delegate pattern.
+// Same as mini-agent-loop — the loop doesn't change.
+// It calls tools through the Tool trait, unaware of WASM underneath.
 // ============================================================================
 
-/// Configuration for the agentic loop.
-/// Maps to: `src/agent/agentic_loop.rs` → `struct AgenticLoopConfig`
 pub struct AgenticLoopConfig {
     pub max_iterations: usize,
 }
 
 impl Default for AgenticLoopConfig {
     fn default() -> Self {
-        Self { max_iterations: 10 }  // IronClaw default is 50
+        Self { max_iterations: 10 }
     }
 }
 
-/// Outcome of the agentic loop.
-/// Maps to: `src/agent/agentic_loop.rs` → `enum LoopOutcome`
-///
-/// In IronClaw, this also has:
-///   - Stopped (external signal)
-///   - NeedApproval (tool requires user confirmation)
 pub enum LoopOutcome {
     Response(String),
     MaxIterations,
 }
 
-/// Run the agentic loop.
-/// Maps to: `src/agent/agentic_loop.rs` → `run_agentic_loop()`
-///
-/// This is the single most important function in the entire system.
-///
-/// In IronClaw, this function:
-///   1. check_signals() — check for cancellation/stop/inject
-///   2. before_llm_call() — refresh tools, cost guard, inject context
-///   3. call_llm() — call the LLM provider
-///   4. Handle text → delegate.handle_text_response()
-///   5. Handle tool calls → delegate.execute_tool_calls()
-///   6. Tool intent nudge — if LLM says "let me search" without calling a tool
-///   7. Truncation handling — if response was cut off (finish_reason=Length)
-///   8. after_iteration() — post-iteration hook
-///
-/// We keep: call LLM → handle text/tools → loop
 async fn run_agentic_loop(
     llm: &dyn LlmProvider,
     registry: &ToolRegistry,
@@ -381,39 +541,27 @@ async fn run_agentic_loop(
     for iteration in 1..=config.max_iterations {
         println!("\n--- Iteration {}/{} ---", iteration, config.max_iterations);
 
-        // ── Step 1: Call LLM ──
-        // In IronClaw: delegate.call_llm(reasoning, reason_ctx, iteration)
-        // The delegate handles rate limiting, auto-compaction, cost tracking,
-        // force_text mode, and model selection.
         let response = llm.chat(messages, &tool_defs).await?;
 
         match response.result {
-            // ── Step 2a: Text Response ──
-            // In IronClaw: delegate.handle_text_response() returns TextAction::Return or Continue
-            // ChatDelegate returns Return (end loop), JobDelegate may return Continue
-            // (if it detects the job isn't done yet).
             LlmOutput::Text(text) => {
                 println!("  💬 LLM returned text: {}", &text[..text.len().min(100)]);
                 return Ok(LoopOutcome::Response(text));
             }
 
-            // ── Step 2b: Tool Calls ──
-            // In IronClaw: delegate.execute_tool_calls() handles:
-            //   - Truncation check (finish_reason == Length → discard malformed calls)
-            //   - Approval check (requires_approval → pause loop)
-            //   - Parallel execution (JoinSet for multiple tools)
-            //   - Status updates (ToolStarted, ToolCompleted events)
-            //   - Safety sanitization of results
-            //   - Hook dispatch (BeforeToolCall, AfterToolCall)
             LlmOutput::ToolCalls { tool_calls, content } => {
                 println!("  🔧 LLM wants to call {} tool(s)", tool_calls.len());
 
-                // In IronClaw: if finish_reason == Length, discard truncated tool calls
-                // and inject a notice telling LLM to try a different approach.
                 if response.finish_reason == FinishReason::Length {
                     println!("  ⚠️  Response was truncated, discarding tool calls");
                     if let Some(text) = content {
-                        messages.push(ChatMessage::assistant(&text));
+                        messages.push(ChatMessage {
+                            role: Role::Assistant,
+                            content: text,
+                            tool_call_id: None,
+                            name: None,
+                            tool_calls: None,
+                        });
                     }
                     messages.push(ChatMessage::user(
                         "Your previous response was truncated. Please try a simpler approach."
@@ -421,18 +569,14 @@ async fn run_agentic_loop(
                     continue;
                 }
 
-                // Add assistant message with tool calls to context
-                // (OpenAI protocol requires this before tool results)
                 messages.push(ChatMessage::assistant_with_tool_calls(
                     content,
                     tool_calls.clone(),
                 ));
 
-                // Execute each tool and add results to context
                 for tc in &tool_calls {
                     let result = execute_tool_with_safety(registry, &tc.name, tc.arguments.clone()).await;
 
-                    // In IronClaw: process_tool_result() sanitizes output and wraps in XML
                     let result_msg = process_tool_result(&tc.name, &tc.id, &result);
 
                     match &result {
@@ -443,8 +587,6 @@ async fn run_agentic_loop(
 
                     messages.push(result_msg);
                 }
-
-                // Loop continues — LLM will see tool results in next iteration
             }
         }
     }
@@ -453,80 +595,7 @@ async fn run_agentic_loop(
 }
 
 // ============================================================================
-// PART 4: Example Tool — Calculator
-// ============================================================================
-// In IronClaw, tools can be:
-//   - Builtin (Rust native): shell, http, file_read, file_write, memory, etc.
-//   - WASM (sandboxed): third-party tools running in Wasmtime sandbox
-//   - MCP (external): tools accessed via Model Context Protocol
-//
-// The Calculator here is a simple builtin tool for demonstration.
-// ============================================================================
-
-struct CalculatorTool;
-
-#[async_trait]
-impl Tool for CalculatorTool {
-    fn name(&self) -> &str { "calculator" }
-
-    fn description(&self) -> &str {
-        "Perform basic arithmetic operations. Supports: add, sub, mul, div."
-    }
-
-    fn parameters_schema(&self) -> serde_json::Value {
-        serde_json::json!({
-            "type": "object",
-            "properties": {
-                "operation": {
-                    "type": "string",
-                    "enum": ["add", "sub", "mul", "div"],
-                    "description": "The arithmetic operation to perform"
-                },
-                "a": { "type": "number", "description": "First operand" },
-                "b": { "type": "number", "description": "Second operand" }
-            },
-            "required": ["operation", "a", "b"]
-        })
-    }
-
-    async fn execute(&self, params: serde_json::Value) -> Result<ToolOutput, String> {
-        let op = params["operation"].as_str().ok_or("Missing 'operation'")?;
-        let a = params["a"].as_f64().ok_or("Missing 'a'")?;
-        let b = params["b"].as_f64().ok_or("Missing 'b'")?;
-
-        let (result, expression) = match op {
-            "add" => (a + b, format!("{} + {} = {}", a, b, a + b)),
-            "sub" => (a - b, format!("{} - {} = {}", a, b, a - b)),
-            "mul" => (a * b, format!("{} × {} = {}", a, b, a * b)),
-            "div" => {
-                if b == 0.0 {
-                    return Err("Division by zero".to_string());
-                }
-                (a / b, format!("{} ÷ {} = {}", a, b, a / b))
-            }
-            _ => return Err(format!("Unknown operation: '{}'", op)),
-        };
-
-        Ok(ToolOutput {
-            result: serde_json::json!({
-                "result": result,
-                "expression": expression,
-            }),
-        })
-    }
-}
-
-// ============================================================================
-// PART 5: Mock LLM Provider
-// ============================================================================
-// In IronClaw, real providers (OpenAI, Anthropic, etc.) make HTTP calls.
-// This mock simulates LLM behavior by pattern-matching on user input:
-//   - Math questions → returns tool call to calculator
-//   - After receiving tool result → returns text summary
-//   - Everything else → returns direct text response
-//
-// This lets you run the demo without an API key while seeing the full
-// agentic loop in action.
+// PART 4: Mock LLM Provider (for testing without API key)
 // ============================================================================
 
 struct MockLlmProvider;
@@ -538,18 +607,14 @@ impl LlmProvider for MockLlmProvider {
         messages: &[ChatMessage],
         _tools: &[ToolDefinition],
     ) -> Result<LlmResponse, String> {
-        // Find the last user message
         let last_user = messages.iter().rev()
             .find(|m| m.role == Role::User)
             .map(|m| m.content.as_str())
             .unwrap_or("");
 
-        // Check if we just received a tool result (last message is a tool result)
         let last_msg = messages.last();
         if let Some(msg) = last_msg {
             if msg.role == Role::Tool {
-                // We have a tool result — summarize it as text
-                // In a real LLM, it would read the tool output and formulate a response
                 return Ok(LlmResponse {
                     result: LlmOutput::Text(format!(
                         "Based on the calculation result: {}",
@@ -563,7 +628,6 @@ impl LlmProvider for MockLlmProvider {
             }
         }
 
-        // Pattern match on user input to decide: text response or tool call?
         let lower = last_user.to_lowercase();
         let is_math = lower.contains('+') || lower.contains('-') || lower.contains('*')
             || lower.contains('/') || lower.contains("plus") || lower.contains("minus")
@@ -574,9 +638,7 @@ impl LlmProvider for MockLlmProvider {
             || lower.contains("how much");
 
         if is_math {
-            // Parse numbers and operation from the input
             let (op, a, b) = parse_math_intent(last_user);
-
             Ok(LlmResponse {
                 result: LlmOutput::ToolCalls {
                     tool_calls: vec![ToolCall {
@@ -593,11 +655,10 @@ impl LlmProvider for MockLlmProvider {
                 finish_reason: FinishReason::ToolUse,
             })
         } else {
-            // Direct text response (no tool needed)
             Ok(LlmResponse {
                 result: LlmOutput::Text(format!(
-                    "I'm a mini agent demo. I can do math! Try asking me something like \
-                     'What is 42 + 58?' or 'Calculate 100 divided by 3'. \
+                    "I'm a mini agent demo with WASM sandbox! I can do math! Try asking me \
+                     something like 'What is 42 + 58?' or 'Calculate 100 divided by 3'. \
                      You said: \"{}\"",
                     last_user
                 )),
@@ -607,22 +668,40 @@ impl LlmProvider for MockLlmProvider {
     }
 }
 
+fn parse_math_intent(input: &str) -> (&str, f64, f64) {
+    let lower = input.to_lowercase();
+    let numbers: Vec<f64> = input
+        .split(|c: char| !c.is_ascii_digit() && c != '.' && c != '-')
+        .filter_map(|s| s.parse::<f64>().ok())
+        .collect();
+
+    let a = numbers.first().copied().unwrap_or(0.0);
+    let b = numbers.get(1).copied().unwrap_or(0.0);
+
+    let op = if lower.contains('+') || lower.contains("plus") || lower.contains("add") {
+        "add"
+    } else if lower.contains('-') || lower.contains("minus") || lower.contains("subtract") {
+        "sub"
+    } else if lower.contains('*') || lower.contains("times") || lower.contains("multiply") {
+        "mul"
+    } else if lower.contains('/') || lower.contains("divide") {
+        "div"
+    } else {
+        "add"
+    };
+
+    (op, a, b)
+}
+
 // ============================================================================
-// PART 5b: Real OpenAI-Compatible LLM Provider
-// ============================================================================
-// Reads configuration from ~/HAI_WOA.json and calls a real LLM API.
-// Supports any OpenAI-compatible endpoint (HaiHub, OpenRouter, etc.)
+// PART 5: Real OpenAI-Compatible LLM Provider
 // ============================================================================
 
-/// Configuration loaded from ~/HAI_WOA.json
 #[derive(Debug, Deserialize)]
 struct HaiConfig {
-    /// Default model ID (e.g. "openai/DeepSeek-V3-0324")
     model: String,
-    /// Named model shortcuts
     #[serde(default)]
     models: HashMap<String, ModelEntry>,
-    /// Environment variables (OPENAI_API_KEY, OPENAI_BASE_URL)
     env: HashMap<String, String>,
 }
 
@@ -632,7 +711,6 @@ struct ModelEntry {
 }
 
 impl HaiConfig {
-    /// Load from ~/HAI_WOA.json
     fn load() -> Result<Self, String> {
         let home = dirs::home_dir().ok_or("Cannot determine home directory")?;
         let path = home.join("HAI_WOA.json");
@@ -643,19 +721,15 @@ impl HaiConfig {
     }
 
     fn api_key(&self) -> Result<String, String> {
-        self.env.get("OPENAI_API_KEY")
-            .cloned()
+        self.env.get("OPENAI_API_KEY").cloned()
             .ok_or_else(|| "OPENAI_API_KEY not found in HAI_WOA.json env".to_string())
     }
 
     fn base_url(&self) -> Result<String, String> {
-        self.env.get("OPENAI_BASE_URL")
-            .cloned()
+        self.env.get("OPENAI_BASE_URL").cloned()
             .ok_or_else(|| "OPENAI_BASE_URL not found in HAI_WOA.json env".to_string())
     }
 
-    /// Resolve a model name: check shortcuts first, then use as-is.
-    /// Strips "openai/" prefix since HaiHub API doesn't need it.
     fn resolve_model(&self, name: Option<&str>) -> String {
         let raw = match name {
             Some(n) => {
@@ -667,11 +741,9 @@ impl HaiConfig {
             }
             None => self.model.clone(),
         };
-        // HaiHub API uses model names without "openai/" prefix
         raw.strip_prefix("openai/").unwrap_or(&raw).to_string()
     }
 
-    /// List available model shortcuts
     fn list_models(&self) -> Vec<(&str, &str)> {
         let mut models: Vec<_> = self.models.iter()
             .map(|(k, v)| (k.as_str(), v.id.as_str()))
@@ -681,8 +753,6 @@ impl HaiConfig {
     }
 }
 
-/// Real OpenAI-compatible LLM provider.
-/// Calls /v1/chat/completions with tool support.
 struct OpenAiCompatibleProvider {
     client: reqwest::Client,
     api_key: String,
@@ -700,7 +770,6 @@ impl OpenAiCompatibleProvider {
     }
 }
 
-/// OpenAI Chat Completions API request body
 #[derive(Serialize)]
 struct OpenAiRequest {
     model: String,
@@ -751,7 +820,6 @@ struct OpenAiFunction {
     parameters: serde_json::Value,
 }
 
-/// OpenAI Chat Completions API response
 #[derive(Deserialize, Debug)]
 struct OpenAiResponse {
     choices: Vec<OpenAiChoice>,
@@ -782,7 +850,6 @@ struct OpenAiFunctionIn {
 }
 
 impl OpenAiCompatibleProvider {
-    /// Convert our ChatMessage list to OpenAI format
     fn convert_messages(messages: &[ChatMessage]) -> Vec<OpenAiMessage> {
         messages.iter().map(|m| {
             let role = match m.role {
@@ -811,7 +878,6 @@ impl OpenAiCompatibleProvider {
         }).collect()
     }
 
-    /// Convert our ToolDefinition list to OpenAI format
     fn convert_tools(tools: &[ToolDefinition]) -> Vec<OpenAiTool> {
         tools.iter().map(|t| OpenAiTool {
             tool_type: "function".to_string(),
@@ -869,7 +935,6 @@ impl LlmProvider for OpenAiCompatibleProvider {
             _ => FinishReason::Stop,
         };
 
-        // Check if there are tool calls
         if let Some(tool_calls_in) = choice.message.tool_calls {
             if !tool_calls_in.is_empty() {
                 let tool_calls: Vec<ToolCall> = tool_calls_in.into_iter().map(|tc| {
@@ -892,7 +957,6 @@ impl LlmProvider for OpenAiCompatibleProvider {
             }
         }
 
-        // Text response
         let text = choice.message.content.unwrap_or_default();
         Ok(LlmResponse {
             result: LlmOutput::Text(text),
@@ -901,57 +965,27 @@ impl LlmProvider for OpenAiCompatibleProvider {
     }
 }
 
-/// Simple math intent parser for the mock LLM.
-/// A real LLM would understand natural language; this is just pattern matching.
-fn parse_math_intent(input: &str) -> (&str, f64, f64) {
-    let lower = input.to_lowercase();
-
-    // Try to find two numbers in the input
-    let numbers: Vec<f64> = input
-        .split(|c: char| !c.is_ascii_digit() && c != '.' && c != '-')
-        .filter_map(|s| s.parse::<f64>().ok())
-        .collect();
-
-    let a = numbers.first().copied().unwrap_or(0.0);
-    let b = numbers.get(1).copied().unwrap_or(0.0);
-
-    // Determine operation
-    let op = if lower.contains('+') || lower.contains("plus") || lower.contains("add") {
-        "add"
-    } else if lower.contains('-') || lower.contains("minus") || lower.contains("subtract") {
-        "sub"
-    } else if lower.contains('*') || lower.contains("times") || lower.contains("multiply") {
-        "mul"
-    } else if lower.contains('/') || lower.contains("divide") {
-        "div"
-    } else {
-        "add" // default
-    };
-
-    (op, a, b)
-}
-
 // ============================================================================
-// PART 6: Main — The Entry Point (replaces Channel + Agent::run())
+// PART 6: Main — Entry Point
 // ============================================================================
-// In IronClaw, the flow is:
-//   Channel::start() → MessageStream → Agent::run() → handle_message()
-//     → SubmissionParser::parse() → process_user_input()
-//       → get_or_create_session() → start_turn() → run_agentic_loop()
-//         → complete_turn() → channel.respond()
-//
-// We replace ALL of that with a simple stdin loop:
-//   stdin → build messages → run_agentic_loop() → print response
+// The key difference: instead of registering a native CalculatorTool,
+// we load a .wasm file and wrap it as a WasmTool.
 // ============================================================================
 
 #[tokio::main]
 async fn main() {
     println!("╔══════════════════════════════════════════════════════════════╗");
-    println!("║           Mini Agent Loop — IronClaw Core Distilled         ║");
+    println!("║      Mini Agent Loop + WASM Sandbox — IronClaw Distilled   ║");
     println!("╠══════════════════════════════════════════════════════════════╣");
     println!("║                                                            ║");
-    println!("║  This demo shows the core agentic loop:                    ║");
-    println!("║    stdin → LLM → Tool Execute → Response → stdout          ║");
+    println!("║  This demo shows the core agentic loop with WASM sandbox:  ║");
+    println!("║    stdin → LLM → WASM Sandbox Tool → Response → stdout     ║");
+    println!("║                                                            ║");
+    println!("║  Tools run inside a Wasmtime WASM sandbox:                 ║");
+    println!("║    • Fuel-limited (prevents infinite loops)                ║");
+    println!("║    • No filesystem/network access                          ║");
+    println!("║    • Can only call host::log() and host::now_millis()      ║");
+    println!("║    • Fresh instance per execution (no state leak)          ║");
     println!("║                                                            ║");
     println!("║  Config: ~/HAI_WOA.json (real LLM API)                     ║");
     println!("║                                                            ║");
@@ -967,11 +1001,32 @@ async fn main() {
     println!("╚══════════════════════════════════════════════════════════════╝");
     println!();
 
-    // ── Setup (corresponds to Agent::new() in IronClaw) ──
+    // ── Step 1: Load WASM tool ──
+    // In IronClaw: WASM tools are loaded from a configured directory
+    // Here we look for the guest .wasm in a known location
+    let wasm_path = std::env::args().nth(1).unwrap_or_else(|| {
+        "../guest/target/wasm32-wasip2/release/guest_tool.wasm".to_string()
+    });
 
-    // 1. Create LLM provider from ~/HAI_WOA.json config
-    //    In IronClaw: configured via config.toml + providers.json, supports OpenAI/Anthropic/Mistral/etc.
-    //    Here we read from ~/HAI_WOA.json for simplicity.
+    println!("🔧 Loading WASM tool from: {}", wasm_path);
+    let wasm_engine = match WasmToolEngine::new(&wasm_path, "calculator", 1_000_000) {
+        Ok(engine) => {
+            println!("✅ WASM tool loaded and compiled");
+            println!("   Name: {}", engine.tool_name);
+            println!("   Description: {}", engine.tool_description);
+            println!("   Fuel limit: {} units per execution", engine.fuel_limit);
+            engine
+        }
+        Err(e) => {
+            eprintln!("❌ Failed to load WASM tool: {}", e);
+            eprintln!("   Make sure to build the guest first:");
+            eprintln!("   cd ../guest && cargo build --target wasm32-wasip2 --release");
+            std::process::exit(1);
+        }
+    };
+    println!();
+
+    // ── Step 2: Setup LLM provider ──
     let hai_config = match HaiConfig::load() {
         Ok(c) => {
             println!("✅ Loaded config from ~/HAI_WOA.json");
@@ -1015,44 +1070,37 @@ async fn main() {
 
     println!();
 
-    // 2. Create tool registry and register tools
-    //    In IronClaw: tools are registered from config, including WASM tools loaded from disk
+    // ── Step 3: Register WASM tool ──
+    // Instead of: registry.register(Box::new(CalculatorTool))  // native Rust
+    // We do:      registry.register(Box::new(WasmTool { ... })) // WASM sandbox
     let mut registry = ToolRegistry::new();
-    registry.register(Box::new(CalculatorTool));
+    registry.register(Box::new(WasmTool {
+        engine: Arc::new(wasm_engine),
+    }));
 
-    // 3. Create system prompt
-    //    In IronClaw: built from agent persona + skill context + tool list + conversation context
+    println!("✅ Tool registry ready (WASM sandboxed tools)");
+    for def in registry.definitions() {
+        println!("   📦 {} — {}", def.name, def.description);
+    }
+    println!();
+
+    // ── Step 4: System prompt ──
     let system_prompt = ChatMessage::system(
         "You are a helpful assistant with access to a calculator tool. \
          When the user asks a math question, use the calculator tool to compute the answer. \
          For non-math questions, respond directly."
     );
 
-    // 4. Loop config
     let config = AgenticLoopConfig::default();
 
-    // ── Main Loop (corresponds to Agent::run() event loop) ──
-    //
-    // In IronClaw:
-    //   loop {
-    //       let message = tokio::select! {
-    //           _ = ctrl_c() => break,
-    //           msg = message_stream.next() => msg,
-    //       };
-    //       // preprocess (transcription, doc extraction)
-    //       let response = self.handle_message(&message).await;
-    //   }
-    //
-    // We simplify to a stdin loop:
-
+    // ── Step 5: Main loop ──
     loop {
-        // ── Read input (replaces Channel::start() → MessageStream) ──
         print!("\n🧑 You: ");
         io::stdout().flush().unwrap();
 
         let mut input = String::new();
         match io::stdin().read_line(&mut input) {
-            Ok(0) => break,  // EOF reached
+            Ok(0) => break,
             Err(_) => break,
             _ => {}
         }
@@ -1066,7 +1114,7 @@ async fn main() {
             break;
         }
 
-        // ── Handle slash commands ──
+        // Handle slash commands
         if input == "/models" {
             if let Some(ref config) = hai_config {
                 println!("\n📋 Available models:");
@@ -1121,23 +1169,15 @@ async fn main() {
             continue;
         }
 
-        // ── Build conversation context ──
-        // In IronClaw: session.thread.messages() collects all historical messages
-        // including system prompt, past turns, tool calls and results.
-        // Here we start fresh each turn (no history).
+        // Build conversation and run agentic loop
         let mut messages = vec![
             system_prompt.clone(),
             ChatMessage::user(input),
         ];
 
-        // ── Run the agentic loop ──
-        // In IronClaw: self.run_agentic_loop(message, tenant, session, thread_id, messages)
-        // This is where the magic happens!
         println!("\n🤖 Agent thinking...");
         match run_agentic_loop(llm.as_ref(), &registry, &mut messages, &config).await {
             Ok(LoopOutcome::Response(text)) => {
-                // In IronClaw: thread.complete_turn(&response) + persist to DB
-                // + hooks.run(ResponseTransform) + channel.respond()
                 println!("\n🤖 Agent: {}", text);
             }
             Ok(LoopOutcome::MaxIterations) => {
