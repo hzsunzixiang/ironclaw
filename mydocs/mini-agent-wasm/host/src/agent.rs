@@ -11,7 +11,7 @@
 //! Same as mini-agent-loop — the loop doesn't change.
 //! It calls tools through the Tool trait, unaware of WASM underneath.
 
-use crate::llm::{ChatMessage, FinishReason, LlmOutput, LlmProvider, Role};
+use crate::llm::{ChatMessage, FinishReason, LlmOutput, LlmProvider};
 use crate::tools::{execute_tool_with_safety, process_tool_result, ToolRegistry};
 
 /// Configuration for the agentic loop.
@@ -68,13 +68,7 @@ pub async fn run_agentic_loop(
                 if response.finish_reason == FinishReason::Length {
                     println!("  ⚠️  Response was truncated, discarding tool calls");
                     if let Some(text) = content {
-                        messages.push(ChatMessage {
-                            role: Role::Assistant,
-                            content: text,
-                            tool_call_id: None,
-                            name: None,
-                            tool_calls: None,
-                        });
+                        messages.push(ChatMessage::assistant(text));
                     }
                     messages.push(ChatMessage::user(
                         "Your previous response was truncated. Please try a simpler approach.",

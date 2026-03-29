@@ -54,6 +54,9 @@ interface tool {
     /// Get the JSON Schema for this tool's parameters.
     schema: func() -> string;
 
+    /// Get the tool's unique name (used for tool registration).
+    name: func() -> string;
+
     /// Get a human-readable description of what this tool does.
     description: func() -> string;
 }

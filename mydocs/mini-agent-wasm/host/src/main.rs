@@ -109,7 +109,7 @@ async fn main() {
     });
 
     println!("🔧 Loading WASM tool from: {}", wasm_path);
-    let wasm_engine = match WasmToolEngine::new(&wasm_path, "calculator", 1_000_000) {
+    let wasm_engine = match WasmToolEngine::new(&wasm_path, 1_000_000) {
         Ok(engine) => {
             println!("✅ WASM tool loaded and compiled");
             println!("   Name: {}", engine.tool_name);
@@ -181,12 +181,17 @@ async fn main() {
     }
     println!();
 
-    // ── Step 4: System prompt ──
-    let system_prompt = ChatMessage::system(
-        "You are a helpful assistant with access to a calculator tool. \
-         When the user asks a math question, use the calculator tool to compute the answer. \
-         For non-math questions, respond directly.",
-    );
+    // ── Step 4: System prompt (includes model identity, updated on /model switch) ──
+    let make_system_prompt = |model: &str| -> ChatMessage {
+        ChatMessage::system(format!(
+            "You are a helpful assistant powered by the {} model. \
+             You have access to a calculator tool. \
+             When the user asks a math question, use the calculator tool to compute the answer. \
+             For non-math questions, respond directly. \
+             When asked about your identity, truthfully state that you are based on {}.",
+            model, model
+        ))
+    };
 
     let config = AgenticLoopConfig::default();
 
@@ -241,7 +246,9 @@ async fn main() {
         }
 
         // ── Build conversation and run agentic loop ──
-        let mut messages = vec![system_prompt.clone(), ChatMessage::user(input)];
+        // NOTE: Each turn creates a fresh message list (no multi-turn memory).
+        // This is intentional for this demo — IronClaw uses session-based context.
+        let mut messages = vec![make_system_prompt(&current_model), ChatMessage::user(input)];
 
         println!("\n🤖 Agent thinking...");
         match run_agentic_loop(llm.as_ref(), &registry, &mut messages, &config).await {

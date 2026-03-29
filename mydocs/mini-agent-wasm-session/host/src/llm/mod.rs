@@ -3,7 +3,7 @@
 //! Corresponds to: `src/llm/provider.rs` in IronClaw.
 //! Defines the core types for LLM interaction.
 //!
-//! Same as mini-agent-loop — the LLM layer is unchanged.
+//! Same as mini-agent-wasm — the LLM layer is unchanged.
 //! The WASM sandbox only affects the tool execution layer.
 
 mod openai;

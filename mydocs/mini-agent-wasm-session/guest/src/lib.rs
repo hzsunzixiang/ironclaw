@@ -139,6 +139,10 @@ impl Guest for CalculatorTool {
         .to_string()
     }
 
+    fn name() -> String {
+        "calculator".to_string()
+    }
+
     fn description() -> String {
         "A sandboxed calculator tool. Performs basic math operations (add, sub, mul, div) inside a WASM sandbox.".to_string()
     }
