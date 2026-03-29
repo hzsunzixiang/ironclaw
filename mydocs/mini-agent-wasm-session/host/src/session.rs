@@ -26,6 +26,7 @@ use std::collections::HashMap;
 use uuid::Uuid;
 
 use crate::llm::{ChatMessage, ToolCall};
+use crate::utils::truncate_str;
 
 // ============================================================================
 // Turn — A single request/response pair
@@ -355,6 +356,14 @@ impl Session {
         self.active_thread.and_then(|id| self.threads.get_mut(&id))
     }
 
+    /// Get a thread by ID mutably.
+    ///
+    /// Provides encapsulated access to threads without exposing the
+    /// internal HashMap directly.
+    pub fn thread_mut(&mut self, id: Uuid) -> Option<&mut Thread> {
+        self.threads.get_mut(&id)
+    }
+
     /// Get or create the active thread.
     pub fn get_or_create_thread(&mut self) -> &mut Thread {
         match self.active_thread {
@@ -381,18 +390,12 @@ impl Session {
             .values()
             .map(|t| {
                 let first_input = t.turns.first().map(|turn| {
-                    let s = &turn.user_input;
-                    if s.len() > 40 {
-                        format!("{}...", &s[..40])
-                    } else {
-                        s.clone()
-                    }
+                    truncate_str(&turn.user_input, 40)
                 });
                 ThreadSummary {
                     id: t.id,
                     is_active: self.active_thread == Some(t.id),
                     turn_count: t.turns.len(),
-                    state: t.state,
                     created_at: t.created_at,
                     first_input,
                 }
@@ -408,8 +411,6 @@ pub struct ThreadSummary {
     pub id: Uuid,
     pub is_active: bool,
     pub turn_count: usize,
-    #[allow(dead_code)]
-    pub state: ThreadState,
     pub created_at: DateTime<Utc>,
     pub first_input: Option<String>,
 }

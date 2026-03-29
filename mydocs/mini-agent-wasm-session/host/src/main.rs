@@ -31,8 +31,11 @@
 //! | `llm` (types)       | `src/llm/provider.rs`                    | ChatMessage, ToolCall, etc.    |
 //! | `llm::openai`       | (replaces real provider configs)         | OpenAI-compatible provider     |
 //! | `tools`             | `src/tools/tool.rs` + `src/wasm/sandbox` | Tool trait & WASM sandbox      |
+//! | `tools::wasm`       | `src/wasm/sandbox.rs`                    | WASM sandbox infrastructure    |
 //! | `session`           | `src/agent/session.rs`                   | Session/Thread/Turn model      |
 //! | `agent`             | `src/agent/agentic_loop.rs`              | The core loop engine           |
+//! | `commands`          | (new)                                    | CLI command handling           |
+//! | `utils`             | (new)                                    | Shared utilities               |
 //!
 //! ## Architecture
 //!
@@ -60,16 +63,19 @@
 //! ```
 
 mod agent;
+mod commands;
 mod llm;
 mod session;
 mod tools;
+mod utils;
 
 use std::io::{self, Write};
 use std::sync::Arc;
 
-use agent::{process_user_input, AgenticLoopConfig};
+use agent::AgenticLoopConfig;
+use commands::{handle_model_command, handle_session_command, handle_user_input, CommandResult};
 use llm::{ChatMessage, HaiConfig, LlmProvider, OpenAiCompatibleProvider};
-use session::{Session, TurnState};
+use session::Session;
 use tools::{ToolRegistry, WasmTool, WasmToolEngine};
 
 // ============================================================================
@@ -84,36 +90,7 @@ use tools::{ToolRegistry, WasmTool, WasmToolEngine};
 
 #[tokio::main]
 async fn main() {
-    println!("╔══════════════════════════════════════════════════════════════╗");
-    println!("║   Mini Agent + WASM Sandbox + Session — IronClaw Distilled ║");
-    println!("╠══════════════════════════════════════════════════════════════╣");
-    println!("║                                                            ║");
-    println!("║  NEW: Session/Thread/Turn conversation management!         ║");
-    println!("║    • Multi-turn: LLM remembers your conversation history   ║");
-    println!("║    • Multiple threads: start new conversations with /new   ║");
-    println!("║    • Turn tracking: each Q&A pair is a recorded Turn       ║");
-    println!("║                                                            ║");
-    println!("║  Session commands:                                         ║");
-    println!("║    /new              Create a new conversation thread      ║");
-    println!("║    /threads          List all threads                      ║");
-    println!("║    /switch <n>       Switch to thread #n                   ║");
-    println!("║    /history          Show turn history                     ║");
-    println!("║    /session          Show session info                     ║");
-    println!("║                                                            ║");
-    println!("║  Other commands:                                           ║");
-    println!("║    /model <name>     Switch LLM model                      ║");
-    println!("║    /models           List available models                  ║");
-    println!("║    quit              Exit                                   ║");
-    println!("║                                                            ║");
-    println!("║  Config: ./HAI_WOA.json (or ~/HAI_WOA.json)                ║");
-    println!("║                                                            ║");
-    println!("║  Try multi-turn:                                           ║");
-    println!("║    1. \"What is 42 + 58?\"                                   ║");
-    println!("║    2. \"Now multiply that result by 3\"                      ║");
-    println!("║    3. \"/history\" to see the conversation                   ║");
-    println!("║                                                            ║");
-    println!("╚══════════════════════════════════════════════════════════════╝");
-    println!();
+    print_banner();
 
     // ── Step 1: Load WASM tool ──
     let wasm_path = std::env::args().nth(1).unwrap_or_else(|| {
@@ -251,210 +228,31 @@ async fn main() {
         if input.is_empty() {
             continue;
         }
-        if input == "quit" || input == "exit" {
-            println!(
-                "👋 Goodbye! Session had {} thread(s), {} total turn(s).",
-                session.threads.len(),
-                session
-                    .threads
-                    .values()
-                    .map(|t| t.turns.len())
-                    .sum::<usize>()
-            );
-            break;
-        }
 
         // ── Session management commands ──
-
-        if input == "/new" {
-            let thread = session.create_thread();
-            println!(
-                "✅ New thread created: {}",
-                &thread.id.to_string()[..8]
-            );
-            println!(
-                "   Now in thread {} (0 turns)",
-                &thread.id.to_string()[..8]
-            );
-            continue;
-        }
-
-        if input == "/threads" {
-            let summaries = session.list_threads();
-            println!("\n📋 Threads ({}):", summaries.len());
-            for (i, s) in summaries.iter().enumerate() {
-                let active = if s.is_active { " ← active" } else { "" };
-                let preview = s.first_input.as_deref().unwrap_or("(empty)");
-                println!(
-                    "   #{} [{}] {} turn(s) — \"{}\"{}",
-                    i + 1,
-                    &s.id.to_string()[..8],
-                    s.turn_count,
-                    preview,
-                    active
-                );
-            }
-            continue;
-        }
-
-        if input.starts_with("/switch ") {
-            let idx_str = input.strip_prefix("/switch ").unwrap().trim();
-            if let Ok(idx) = idx_str.parse::<usize>() {
-                let summaries = session.list_threads();
-                if idx >= 1 && idx <= summaries.len() {
-                    let thread_id = summaries[idx - 1].id;
-                    if session.switch_thread(thread_id) {
-                        let thread = session.active_thread().unwrap();
-                        println!(
-                            "✅ Switched to thread #{} [{}] ({} turns)",
-                            idx,
-                            &thread_id.to_string()[..8],
-                            thread.turns.len()
-                        );
-                    } else {
-                        println!("❌ Failed to switch thread");
-                    }
-                } else {
-                    println!("❌ Invalid thread number. Use /threads to see available threads.");
-                }
-            } else {
-                println!("❌ Usage: /switch <number>");
-            }
-            continue;
-        }
-
-        if input == "/history" {
-            if let Some(thread) = session.active_thread() {
-                if thread.turns.is_empty() {
-                    println!("\n📜 No turns yet in this thread.");
-                } else {
-                    println!(
-                        "\n📜 Turn history for thread {} ({} turns):",
-                        &thread.id.to_string()[..8],
-                        thread.turns.len()
-                    );
-                    for turn in &thread.turns {
-                        let state_icon = match turn.state {
-                            TurnState::Completed => "✅",
-                            TurnState::Processing => "⏳",
-                            TurnState::Failed => "❌",
-                        };
-                        let input_preview = if turn.user_input.len() > 60 {
-                            format!("{}...", &turn.user_input[..60])
-                        } else {
-                            turn.user_input.clone()
-                        };
-                        println!(
-                            "\n   Turn #{} {} [{}]",
-                            turn.turn_number + 1,
-                            state_icon,
-                            turn.started_at.format("%H:%M:%S")
-                        );
-                        println!("     🧑 \"{}\"", input_preview);
-
-                        for tc in &turn.tool_calls {
-                            let result_preview = if let Some(ref err) = tc.error {
-                                format!("❌ {}", err)
-                            } else if let Some(ref res) = tc.result {
-                                let s = match res {
-                                    serde_json::Value::String(s) => s.clone(),
-                                    other => other.to_string(),
-                                };
-                                if s.len() > 60 {
-                                    format!("{}...", &s[..60])
-                                } else {
-                                    s
-                                }
-                            } else {
-                                "⏳ pending".to_string()
-                            };
-                            println!(
-                                "     🔧 {}({}) → {}",
-                                tc.name, tc.parameters, result_preview
-                            );
-                        }
-
-                        if let Some(ref response) = turn.response {
-                            let resp_preview = if response.len() > 80 {
-                                format!("{}...", &response[..80])
-                            } else {
-                                response.clone()
-                            };
-                            println!("     🤖 \"{}\"", resp_preview);
-                        }
-                        if let Some(ref error) = turn.error {
-                            println!("     ❌ Error: {}", error);
-                        }
-                    }
-                }
-            } else {
-                println!("⚠️  No active thread.");
-            }
-            continue;
-        }
-
-        if input == "/session" {
-            println!("\n📊 Session info:");
-            println!("   ID: {}", session.id);
-            println!("   User: {}", session.user_id);
-            println!(
-                "   Created: {}",
-                session.created_at.format("%Y-%m-%d %H:%M:%S")
-            );
-            println!("   Threads: {}", session.threads.len());
-            println!(
-                "   Total turns: {}",
-                session
-                    .threads
-                    .values()
-                    .map(|t| t.turns.len())
-                    .sum::<usize>()
-            );
-            if let Some(thread) = session.active_thread() {
-                println!(
-                    "   Active thread: {} ({} turns, {:?})",
-                    &thread.id.to_string()[..8],
-                    thread.turns.len(),
-                    thread.state
-                );
-            }
-            println!("   LLM: {}", current_model);
-            continue;
+        match handle_session_command(input, &mut session, &current_model) {
+            CommandResult::Quit => break,
+            CommandResult::Continue => continue,
+            CommandResult::NotACommand => {}
         }
 
         // ── LLM model commands ──
-
-        if input == "/models" {
-            println!("\n📋 Available models:");
-            println!("   (default) → {}", hai_config.model);
-            for (shortcut, model_id) in hai_config.list_models() {
-                let marker = if current_model == model_id {
-                    " ← current"
-                } else {
-                    ""
-                };
-                println!("   {} → {}{}", shortcut, model_id, marker);
-            }
-            println!("   Current: {}", current_model);
-            continue;
-        }
-        if input.starts_with("/model ") {
-            let model_name = input.strip_prefix("/model ").unwrap().trim();
-            let resolved = hai_config.resolve_model(Some(model_name));
-            current_model = resolved.clone();
-            match make_provider(&resolved, &hai_config) {
-                Ok(p) => {
-                    llm = p;
-                    println!("✅ Switched to model: {}", resolved);
+        if let Some(resolved) = handle_model_command(input, &hai_config, &current_model) {
+            if resolved != current_model {
+                match make_provider(&resolved, &hai_config) {
+                    Ok(p) => {
+                        llm = p;
+                        current_model = resolved;
+                        println!("✅ Switched to model: {}", current_model);
+                    }
+                    Err(e) => println!("❌ Failed to switch model: {}", e),
                 }
-                Err(e) => println!("❌ Failed to switch model: {}", e),
             }
             continue;
         }
 
         // ── Process user input through Session/Thread/Turn pipeline ──
-        println!("\n🤖 Agent thinking...");
-        match process_user_input(
+        handle_user_input(
             &mut session,
             llm.as_ref(),
             &registry,
@@ -462,14 +260,40 @@ async fn main() {
             &loop_config,
             input,
         )
-        .await
-        {
-            Ok(text) => {
-                println!("\n🤖 Agent: {}", text);
-            }
-            Err(e) => {
-                println!("\n❌ Error: {}", e);
-            }
-        }
+        .await;
     }
+}
+
+/// Print the startup banner.
+fn print_banner() {
+    println!("╔══════════════════════════════════════════════════════════════╗");
+    println!("║   Mini Agent + WASM Sandbox + Session — IronClaw Distilled ║");
+    println!("╠══════════════════════════════════════════════════════════════╣");
+    println!("║                                                            ║");
+    println!("║  NEW: Session/Thread/Turn conversation management!         ║");
+    println!("║    • Multi-turn: LLM remembers your conversation history   ║");
+    println!("║    • Multiple threads: start new conversations with /new   ║");
+    println!("║    • Turn tracking: each Q&A pair is a recorded Turn       ║");
+    println!("║                                                            ║");
+    println!("║  Session commands:                                         ║");
+    println!("║    /new              Create a new conversation thread      ║");
+    println!("║    /threads          List all threads                      ║");
+    println!("║    /switch <n>       Switch to thread #n                   ║");
+    println!("║    /history          Show turn history                     ║");
+    println!("║    /session          Show session info                     ║");
+    println!("║                                                            ║");
+    println!("║  Other commands:                                           ║");
+    println!("║    /model <name>     Switch LLM model                      ║");
+    println!("║    /models           List available models                  ║");
+    println!("║    quit              Exit                                   ║");
+    println!("║                                                            ║");
+    println!("║  Config: ./HAI_WOA.json (or ~/HAI_WOA.json)                ║");
+    println!("║                                                            ║");
+    println!("║  Try multi-turn:                                           ║");
+    println!("║    1. \"What is 42 + 58?\"                                   ║");
+    println!("║    2. \"Now multiply that result by 3\"                      ║");
+    println!("║    3. \"/history\" to see the conversation                   ║");
+    println!("║                                                            ║");
+    println!("╚══════════════════════════════════════════════════════════════╝");
+    println!();
 }

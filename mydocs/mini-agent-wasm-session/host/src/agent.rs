@@ -12,8 +12,9 @@
 //! the loop so they can be recorded into the Turn afterwards.
 
 use crate::llm::{ChatMessage, FinishReason, LlmOutput, LlmProvider};
-use crate::session::Session;
+use crate::session::{Session, Turn};
 use crate::tools::{execute_tool_with_safety, process_tool_result, ToolRegistry};
+use crate::utils::truncate_str;
 
 /// Configuration for the agentic loop.
 /// Maps to: `src/agent/agentic_loop.rs` → `struct AgenticLoopConfig`
@@ -27,18 +28,47 @@ impl Default for AgenticLoopConfig {
     }
 }
 
+/// A tool call recorded during the agentic loop, for later storage into a Turn.
+///
+/// Replaces the raw `(String, serde_json::Value, Result<String, String>)` tuple
+/// for better readability and self-documentation.
+pub struct RecordedToolCall {
+    /// Tool name.
+    pub name: String,
+    /// Parameters passed to the tool (JSON).
+    pub params: serde_json::Value,
+    /// Result from the tool execution (Ok = output string, Err = error string).
+    pub result: Result<String, String>,
+}
+
 /// Outcome of the agentic loop — includes tool call info for Turn recording.
 pub enum LoopOutcome {
     /// LLM returned a final text response.
     Response {
         text: String,
-        /// Tool calls made during this turn (name, params, result/error).
-        tool_calls: Vec<(String, serde_json::Value, Result<String, String>)>,
+        /// Tool calls made during this turn.
+        tool_calls: Vec<RecordedToolCall>,
     },
     /// Reached max iterations without a final response.
     MaxIterations {
-        tool_calls: Vec<(String, serde_json::Value, Result<String, String>)>,
+        tool_calls: Vec<RecordedToolCall>,
     },
+}
+
+/// Record a list of tool calls into a Turn.
+///
+/// Extracted to eliminate duplication between the Response and MaxIterations
+/// branches of process_user_input().
+fn record_tool_calls_to_turn(turn: &mut Turn, tool_calls: &[RecordedToolCall]) {
+    for tc in tool_calls {
+        turn.record_tool_call(&tc.name, tc.params.clone());
+        match &tc.result {
+            Ok(output) => {
+                turn.record_tool_result(serde_json::Value::String(output.clone()))
+            }
+            Err(e) => turn.record_tool_error(e.clone()),
+        }
+    }
 }
 
 /// Run the agentic loop.
@@ -53,8 +83,7 @@ async fn run_agentic_loop(
     config: &AgenticLoopConfig,
 ) -> Result<LoopOutcome, String> {
     let tool_defs = registry.definitions();
-    let mut recorded_tool_calls: Vec<(String, serde_json::Value, Result<String, String>)> =
-        Vec::new();
+    let mut recorded_tool_calls: Vec<RecordedToolCall> = Vec::new();
 
     for iteration in 1..=config.max_iterations {
         println!(
@@ -111,7 +140,11 @@ async fn run_agentic_loop(
                     }
 
                     // Record for Turn
-                    recorded_tool_calls.push((tc.name.clone(), tc.arguments.clone(), result));
+                    recorded_tool_calls.push(RecordedToolCall {
+                        name: tc.name.clone(),
+                        params: tc.arguments.clone(),
+                        result,
+                    });
 
                     messages.push(result_msg);
                 }
@@ -177,37 +210,19 @@ pub async fn process_user_input(
     let outcome = run_agentic_loop(llm, registry, &mut messages, loop_config).await;
 
     // 5. Record results into the Turn
-    let thread = session.threads.get_mut(&thread_id).unwrap();
+    let thread = session.thread_mut(thread_id).unwrap();
 
     match outcome {
         Ok(LoopOutcome::Response { text, tool_calls }) => {
-            // Record tool calls into the turn
             if let Some(turn) = thread.last_turn_mut() {
-                for (name, params, result) in &tool_calls {
-                    turn.record_tool_call(name, params.clone());
-                    match result {
-                        Ok(output) => {
-                            turn.record_tool_result(serde_json::Value::String(output.clone()))
-                        }
-                        Err(e) => turn.record_tool_error(e.clone()),
-                    }
-                }
+                record_tool_calls_to_turn(turn, &tool_calls);
             }
-            // Complete the turn
             thread.complete_turn(&text);
             Ok(text)
         }
         Ok(LoopOutcome::MaxIterations { tool_calls }) => {
             if let Some(turn) = thread.last_turn_mut() {
-                for (name, params, result) in &tool_calls {
-                    turn.record_tool_call(name, params.clone());
-                    match result {
-                        Ok(output) => {
-                            turn.record_tool_result(serde_json::Value::String(output.clone()))
-                        }
-                        Err(e) => turn.record_tool_error(e.clone()),
-                    }
-                }
+                record_tool_calls_to_turn(turn, &tool_calls);
             }
             thread.fail_turn("Reached maximum iterations");
             Err("Reached maximum iterations without a final response.".to_string())
@@ -217,19 +232,4 @@ pub async fn process_user_input(
             Err(e)
         }
     }
-}
-
-/// Safely truncate a string to at most `max_bytes` bytes without splitting
-/// a multi-byte UTF-8 character. Returns the truncated slice with "[...]" appended
-/// if truncation occurred.
-fn truncate_str(s: &str, max_bytes: usize) -> String {
-    if s.len() <= max_bytes {
-        return s.to_string();
-    }
-    // Walk backwards from max_bytes to find a valid char boundary
-    let mut end = max_bytes;
-    while end > 0 && !s.is_char_boundary(end) {
-        end -= 1;
-    }
-    format!("{}[...]", &s[..end])
 }
