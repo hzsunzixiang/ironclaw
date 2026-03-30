@@ -310,10 +310,10 @@ impl LlmProvider for OpenAiCompatibleProvider {
             },
         };
 
-        // Log the full request body at trace level
-        trace!(
+        // Log the full request body at debug level
+        debug!(
             request_body = %serde_json::to_string_pretty(&body).unwrap_or_else(|_| "<serialization error>".to_string()),
-            "Full OpenAI API request body"
+            "📤 Full OpenAI API request body"
         );
         // Log a summary at debug level
         debug!(
@@ -365,10 +365,10 @@ impl LlmProvider for OpenAiCompatibleProvider {
         // Read raw response for logging
         let response_text = resp.text().await
             .map_err(|e| format!("Failed to read response body: {}", e))?;
-        trace!(
+        debug!(
             response_body = %response_text,
             response_len = response_text.len(),
-            "Raw API response body ({} bytes)", response_text.len()
+            "📥 Raw API response body ({} bytes)", response_text.len()
         );
 
         let openai_resp: OpenAiResponse = serde_json::from_str(&response_text)
