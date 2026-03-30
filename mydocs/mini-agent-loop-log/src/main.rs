@@ -28,7 +28,7 @@ mod agent;
 mod llm;
 mod tools;
 
-use std::io::{self, Write};
+use std::io::{self, IsTerminal, Write};
 
 use tracing::{debug, info, trace, warn, error};
 
@@ -65,6 +65,7 @@ async fn main() {
         .with_target(true)       // show module path (e.g. mini_agent_loop::llm::openai)
         .with_thread_names(true) // show thread names
         .with_level(true)        // show log level
+        .with_ansi(std::io::stderr().is_terminal()) // auto-detect: colors in terminal, plain text in file
         .init();
 
     info!("🚀 Starting Mini Agent Loop — tracing initialized");
@@ -310,7 +311,7 @@ fn format_messages_for_log(messages: &[ChatMessage]) -> String {
             llm::Role::Assistant => "ASSISTANT",
             llm::Role::Tool => "TOOL",
         };
-        output.push_str(&format!("\n  [{}] {} | content: \"{}\"", i, role, truncate_for_log(&msg.content, 200)));
+        output.push_str(&format!("\n  [{}] {} | content: \"{}\"", i, role, &msg.content));
         if let Some(ref tc) = msg.tool_calls {
             output.push_str(&format!(" | tool_calls: {:?}", tc));
         }
@@ -322,17 +323,4 @@ fn format_messages_for_log(messages: &[ChatMessage]) -> String {
         }
     }
     output
-}
-
-/// Truncate string for log display
-fn truncate_for_log(s: &str, max: usize) -> String {
-    if s.len() <= max {
-        s.to_string()
-    } else {
-        let mut end = max;
-        while end > 0 && !s.is_char_boundary(end) {
-            end -= 1;
-        }
-        format!("{}...[truncated, total {} bytes]", &s[..end], s.len())
-    }
 }
