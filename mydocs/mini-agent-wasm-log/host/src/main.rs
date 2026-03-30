@@ -58,8 +58,10 @@ mod agent;
 mod llm;
 mod tools;
 
-use std::io::{self, Write};
+use std::io::{self, IsTerminal, Write};
 use std::sync::Arc;
+
+use tracing::{debug, info, trace, warn, error};
 
 use agent::{run_agentic_loop, AgenticLoopConfig, LoopOutcome};
 use llm::{ChatMessage, HaiConfig, LlmProvider, OpenAiCompatibleProvider};
@@ -74,6 +76,32 @@ use tools::{ToolRegistry, WasmTool, WasmToolEngine};
 
 #[tokio::main]
 async fn main() {
+    // ── Initialize tracing subscriber ──
+    // Control log level via RUST_LOG env var:
+    //   RUST_LOG=mini_agent_wasm=trace  — maximum detail for OUR code only (recommended)
+    //   RUST_LOG=mini_agent_wasm=debug  — detailed (requests, responses, tool calls)
+    //   RUST_LOG=info                   — key events only (default)
+    //   RUST_LOG=mini_agent_wasm::llm=trace  — only LLM module at trace level
+    //
+    // ⚠️  Avoid RUST_LOG=trace (without module filter) — wasmtime internals
+    //    (type_registry, cranelift, regalloc) produce thousands of unreadable lines.
+    //    Always scope trace/debug to our crate: mini_agent_wasm=trace
+    //
+    // Default filter: our crate at info, third-party noisy crates at warn
+    let default_filter = "mini_agent_wasm=info,wasmtime=warn,cranelift=warn,regalloc=warn,wasi=warn,info";
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new(default_filter)),
+        )
+        .with_target(true)       // show module path (e.g. mini_agent_wasm::llm::openai)
+        .with_thread_names(true) // show thread names
+        .with_level(true)        // show log level
+        .with_ansi(std::io::stderr().is_terminal()) // auto-detect: colors in terminal, plain text in file
+        .init();
+
+    info!("🚀 Starting Mini Agent Loop + WASM Sandbox — tracing initialized");
+
     println!("╔══════════════════════════════════════════════════════════════╗");
     println!("║      Mini Agent Loop + WASM Sandbox — IronClaw Distilled   ║");
     println!("╠══════════════════════════════════════════════════════════════╣");
@@ -108,9 +136,20 @@ async fn main() {
         "../guest/target/wasm32-wasip2/release/guest_tool.wasm".to_string()
     });
 
+    info!(wasm_path = %wasm_path, "🔧 Loading WASM tool...");
     println!("🔧 Loading WASM tool from: {}", wasm_path);
     let wasm_engine = match WasmToolEngine::new(&wasm_path, 1_000_000) {
         Ok(engine) => {
+            info!(
+                tool_name = %engine.tool_name,
+                tool_description = %engine.tool_description,
+                fuel_limit = engine.fuel_limit,
+                "✅ WASM tool loaded and compiled"
+            );
+            debug!(
+                tool_schema = %serde_json::to_string_pretty(&engine.tool_schema).unwrap_or_default(),
+                "WASM tool schema"
+            );
             println!("✅ WASM tool loaded and compiled");
             println!("   Name: {}", engine.tool_name);
             println!("   Description: {}", engine.tool_description);
@@ -118,6 +157,7 @@ async fn main() {
             engine
         }
         Err(e) => {
+            error!(error = %e, "❌ Failed to load WASM tool");
             eprintln!("❌ Failed to load WASM tool: {}", e);
             eprintln!("   Make sure to build the guest first:");
             eprintln!("   cd ../guest && cargo build --target wasm32-wasip2 --release");
@@ -127,11 +167,23 @@ async fn main() {
     println!();
 
     // ── Step 2: Setup LLM provider ──
+    info!("📂 Loading LLM configuration from HAI_WOA.json ...");
     let hai_config = HaiConfig::load().unwrap_or_else(|e| {
+        error!("❌ Failed to load HAI_WOA.json: {}", e);
         eprintln!("❌ Failed to load ~/HAI_WOA.json: {}", e);
         eprintln!("   Please create HAI_WOA.json in the current directory or ~/HAI_WOA.json.");
         std::process::exit(1);
     });
+
+    info!(
+        model = %hai_config.model,
+        base_url = %hai_config.base_url().unwrap_or_default(),
+        "✅ Config loaded successfully"
+    );
+    debug!(
+        available_models = ?hai_config.list_models(),
+        "Available model shortcuts"
+    );
 
     println!("✅ Loaded config from {}",
         if std::path::Path::new("HAI_WOA.json").exists() { "./HAI_WOA.json" } else { "~/HAI_WOA.json" }
@@ -149,9 +201,11 @@ async fn main() {
     );
 
     let mut current_model = hai_config.resolve_model(None);
+    info!(current_model = %current_model, "🤖 Initial model selected");
 
     let make_provider =
         |model: &str, config: &HaiConfig| -> Result<Box<dyn LlmProvider>, String> {
+            debug!(model = %model, "Creating new LLM provider instance");
             Ok(Box::new(OpenAiCompatibleProvider::new(
                 config.api_key()?,
                 config.base_url()?,
@@ -161,6 +215,7 @@ async fn main() {
 
     let mut llm: Box<dyn LlmProvider> = make_provider(&current_model, &hai_config)
         .unwrap_or_else(|e| {
+            error!("❌ Failed to create LLM provider: {}", e);
             eprintln!("❌ Failed to create LLM provider: {}", e);
             std::process::exit(1);
         });
@@ -168,12 +223,25 @@ async fn main() {
     println!();
 
     // ── Step 3: Register WASM tool ──
-    // Instead of: registry.register(Box::new(CalculatorTool))  // native Rust
-    // We do:      registry.register(Box::new(WasmTool { ... })) // WASM sandbox
     let mut registry = ToolRegistry::new();
     registry.register(Box::new(WasmTool {
         engine: Arc::new(wasm_engine),
     }));
+
+    info!(
+        tools = ?registry.definitions().iter().map(|t| &t.name).collect::<Vec<_>>(),
+        "🔧 Tool registry initialized (WASM sandboxed tools)"
+    );
+    debug!(
+        tool_definitions = %serde_json::to_string_pretty(&registry.definitions().iter().map(|t| {
+            serde_json::json!({
+                "name": &t.name,
+                "description": &t.description,
+                "parameters": &t.parameters,
+            })
+        }).collect::<Vec<_>>()).unwrap_or_default(),
+        "Full tool definitions (sent to LLM)"
+    );
 
     println!("✅ Tool registry ready (WASM sandboxed tools)");
     for def in registry.definitions() {
@@ -181,7 +249,7 @@ async fn main() {
     }
     println!();
 
-    // ── Step 4: System prompt (includes model identity, updated on /model switch) ──
+    // ── Step 4: System prompt ──
     let make_system_prompt = |model: &str| -> ChatMessage {
         ChatMessage::system(format!(
             "You are a helpful assistant powered by the {} model. \
@@ -194,8 +262,11 @@ async fn main() {
     };
 
     let config = AgenticLoopConfig::default();
+    info!(max_iterations = config.max_iterations, "⚙️  Agentic loop config");
 
     // ── Step 5: Main loop ──
+    info!("🔄 Entering main input loop — waiting for user input...");
+
     loop {
         print!("\n🧑 You: ");
         io::stdout().flush().unwrap();
@@ -209,15 +280,20 @@ async fn main() {
         let input = input.trim();
 
         if input.is_empty() {
+            trace!("Empty input, skipping");
             continue;
         }
         if input == "quit" || input == "exit" {
+            info!("👋 User requested exit");
             println!("👋 Goodbye!");
             break;
         }
 
+        info!(input = %input, "📝 User input received");
+
         // ── Handle slash commands ──
         if input == "/models" {
+            debug!("Listing available models");
             println!("\n📋 Available models:");
             println!("   (default) → {}", hai_config.model);
             for (shortcut, model_id) in hai_config.list_models() {
@@ -234,6 +310,11 @@ async fn main() {
         if input.starts_with("/model ") {
             let model_name = input.strip_prefix("/model ").unwrap().trim();
             let resolved = hai_config.resolve_model(Some(model_name));
+            info!(
+                requested = %model_name,
+                resolved = %resolved,
+                "🔄 Switching model"
+            );
             current_model = resolved.clone();
             match make_provider(&resolved, &hai_config) {
                 Ok(p) => {
@@ -246,21 +327,83 @@ async fn main() {
         }
 
         // ── Build conversation and run agentic loop ──
-        // NOTE: Each turn creates a fresh message list (no multi-turn memory).
-        // This is intentional for this demo — IronClaw uses session-based context.
+        info!("📋 Building conversation context (system prompt + user message)");
         let mut messages = vec![make_system_prompt(&current_model), ChatMessage::user(input)];
+        debug!(
+            system_prompt = %messages[0].content,
+            user_message = %messages[1].content,
+            message_count = messages.len(),
+            "Initial messages for agentic loop"
+        );
+        trace!(
+            messages_detail = %format_messages_for_log(&messages),
+            "Full message context before agentic loop"
+        );
 
+        info!("🧠 Starting agentic loop (model={}, max_iterations={})", current_model, config.max_iterations);
         println!("\n🤖 Agent thinking...");
+
+        let start_time = std::time::Instant::now();
         match run_agentic_loop(llm.as_ref(), &registry, &mut messages, &config).await {
             Ok(LoopOutcome::Response(text)) => {
+                let elapsed = start_time.elapsed();
+                info!(
+                    elapsed_ms = elapsed.as_millis(),
+                    response_len = text.len(),
+                    "✅ Agentic loop completed with text response"
+                );
+                debug!(response = %text, "Full agent response");
+                trace!(
+                    final_messages = %format_messages_for_log(&messages),
+                    "Final message context after agentic loop"
+                );
                 println!("\n🤖 Agent: {}", text);
             }
             Ok(LoopOutcome::MaxIterations) => {
+                let elapsed = start_time.elapsed();
+                warn!(
+                    elapsed_ms = elapsed.as_millis(),
+                    "⚠️  Agentic loop reached max iterations without final response"
+                );
+                trace!(
+                    final_messages = %format_messages_for_log(&messages),
+                    "Message context at max iterations"
+                );
                 println!("\n⚠️  Agent: Reached maximum iterations without a final response.");
             }
             Err(e) => {
+                let elapsed = start_time.elapsed();
+                error!(
+                    elapsed_ms = elapsed.as_millis(),
+                    error = %e,
+                    "❌ Agentic loop failed with error"
+                );
                 println!("\n❌ Error: {}", e);
             }
         }
     }
+}
+
+/// Format messages for detailed logging
+fn format_messages_for_log(messages: &[ChatMessage]) -> String {
+    let mut output = String::new();
+    for (i, msg) in messages.iter().enumerate() {
+        let role = match msg.role {
+            llm::Role::System => "SYSTEM",
+            llm::Role::User => "USER",
+            llm::Role::Assistant => "ASSISTANT",
+            llm::Role::Tool => "TOOL",
+        };
+        output.push_str(&format!("\n  [{}] {} | content: \"{}\"", i, role, &msg.content));
+        if let Some(ref tc) = msg.tool_calls {
+            output.push_str(&format!(" | tool_calls: {:?}", tc));
+        }
+        if let Some(ref id) = msg.tool_call_id {
+            output.push_str(&format!(" | tool_call_id: {}", id));
+        }
+        if let Some(ref name) = msg.name {
+            output.push_str(&format!(" | name: {}", name));
+        }
+    }
+    output
 }

@@ -21,7 +21,7 @@ CYAN   := \033[0;36m
 YELLOW := \033[0;33m
 RESET  := \033[0m
 
-.PHONY: all build build-guest build-host run run-debug debug clean help check-deps
+.PHONY: all build build-guest build-host run run-debug run-trace debug clean help check-deps
 
 all: build
 
@@ -51,6 +51,11 @@ run-debug: debug
 	@echo "$(YELLOW)═══ Running (debug mode) ═══$(RESET)"
 	cd $(HOST_DIR) && cargo run -- ../$(GUEST_DIR)/target/wasm32-wasip2/debug/guest_tool.wasm
 
+run-trace: build
+	@echo ""
+	@echo "$(YELLOW)═══ Running with RUST_LOG=trace (full tracing) ═══$(RESET)"
+	./run-trace.sh
+
 debug:
 	@echo "$(CYAN)━━━ Building Guest (WASM, debug) ━━━$(RESET)"
 	cd $(GUEST_DIR) && cargo build --target wasm32-wasip2
@@ -76,6 +81,7 @@ help:
 	@echo "  $(GREEN)build-host$(RESET)   Build host binary only"
 	@echo "  $(GREEN)run$(RESET)          Build and run (release mode)"
 	@echo "  $(GREEN)run-debug$(RESET)    Build and run (debug mode)"
+	@echo "  $(GREEN)run-trace$(RESET)    Build and run with RUST_LOG=trace (saves to trace-output-raw.log)"
 	@echo "  $(GREEN)clean$(RESET)        Remove all build artifacts"
 	@echo "  $(GREEN)check-deps$(RESET)   Check required tools"
 	@echo ""

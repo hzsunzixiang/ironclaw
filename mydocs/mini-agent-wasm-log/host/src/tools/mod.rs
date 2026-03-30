@@ -20,6 +20,8 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+use tracing::{debug, info, trace, warn, error};
+
 use wasmtime::component::Linker;
 use wasmtime::{Config, Engine, Store};
 use wasmtime_wasi::{ResourceTable, WasiCtx, WasiCtxBuilder, WasiView};
@@ -54,10 +56,18 @@ pub struct ToolRegistry {
 
 impl ToolRegistry {
     pub fn new() -> Self {
+        debug!("Creating new ToolRegistry");
         Self { tools: Vec::new() }
     }
 
     pub fn register(&mut self, tool: Box<dyn Tool>) {
+        info!(tool_name = %tool.name(), "Registering tool: '{}'", tool.name());
+        debug!(
+            tool_name = %tool.name(),
+            description = %tool.description(),
+            schema = %serde_json::to_string_pretty(&tool.parameters_schema()).unwrap_or_default(),
+            "Tool details"
+        );
         self.tools.push(tool);
     }
 
@@ -146,15 +156,22 @@ impl demo::sandbox::host::Host for StoreData {
             demo::sandbox::host::LogLevel::Warn => "WARN",
             demo::sandbox::host::LogLevel::Error => "ERROR",
         };
+        info!(
+            wasm_log_level = %level_str,
+            wasm_message = %message,
+            "📋 [WASM LOG] [{}] {}", level_str, message
+        );
         println!("    📋 [WASM LOG] [{level_str}] {message}");
         self.logs.push((level_str.to_string(), message));
     }
 
     fn now_millis(&mut self) -> u64 {
-        SystemTime::now()
+        let millis = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .map(|d| d.as_millis() as u64)
-            .unwrap_or(0)
+            .unwrap_or(0);
+        trace!(millis = millis, "WASM guest called now_millis()");
+        millis
     }
 }
 
@@ -181,6 +198,11 @@ impl WasmToolEngine {
     /// 2. Compiles the WASM bytes to native code
     /// 3. Instantiates once to read tool metadata (name, description, schema)
     pub fn new(wasm_path: &str, fuel_limit: u64) -> Result<Self, String> {
+        info!(
+            wasm_path = %wasm_path,
+            fuel_limit = fuel_limit,
+            "🔧 Creating WASM tool engine"
+        );
         // Create engine with component model and fuel metering
         let mut config = Config::new();
         config.wasm_component_model(true);
@@ -189,12 +211,18 @@ impl WasmToolEngine {
             Engine::new(&config).map_err(|e| format!("Failed to create WASM engine: {}", e))?;
 
         // Load and compile the WASM component
+        debug!(wasm_path = %wasm_path, "Loading WASM bytes from file");
         let wasm_bytes = std::fs::read(wasm_path)
             .map_err(|e| format!("Failed to read WASM file '{}': {}", wasm_path, e))?;
+        info!(wasm_size = wasm_bytes.len(), "WASM file loaded ({} bytes)", wasm_bytes.len());
+
+        debug!("Compiling WASM component...");
         let component = wasmtime::component::Component::new(&engine, &wasm_bytes)
             .map_err(|e| format!("Failed to compile WASM component: {}", e))?;
+        info!("✅ WASM component compiled successfully");
 
         // Instantiate once to read metadata
+        debug!("Instantiating WASM component to read metadata...");
         let mut linker: Linker<StoreData> = Linker::new(&engine);
         wasmtime_wasi::add_to_linker_sync(&mut linker)
             .map_err(|e| format!("Failed to add WASI to linker: {}", e))?;
@@ -232,6 +260,16 @@ impl WasmToolEngine {
         let schema: serde_json::Value = serde_json::from_str(&schema_str)
             .map_err(|e| format!("Failed to parse schema JSON: {}", e))?;
 
+        info!(
+            tool_name = %tool_name,
+            tool_description = %description,
+            "✅ WASM tool metadata loaded: name='{}'", tool_name
+        );
+        debug!(
+            tool_schema = %serde_json::to_string_pretty(&schema).unwrap_or_default(),
+            "WASM tool schema"
+        );
+
         Ok(Self {
             engine,
             component,
@@ -247,6 +285,12 @@ impl WasmToolEngine {
     /// Each call creates a NEW Store — complete isolation between executions.
     /// The guest gets a fresh fuel budget and clean state every time.
     fn execute_in_sandbox(&self, params: &str) -> Result<String, String> {
+        info!(
+            tool = %self.tool_name,
+            params = %params,
+            fuel_limit = self.fuel_limit,
+            "🏖️  Executing tool in WASM sandbox"
+        );
         // Fresh linker for this execution
         let mut linker: Linker<StoreData> = Linker::new(&self.engine);
         wasmtime_wasi::add_to_linker_sync(&mut linker)
@@ -255,6 +299,7 @@ impl WasmToolEngine {
             .map_err(|e| format!("Host linker error: {}", e))?;
 
         // Fresh store — complete isolation from previous executions
+        debug!("Creating fresh WASM store (complete isolation)");
         let mut store = Store::new(
             &self.engine,
             StoreData {
@@ -268,10 +313,12 @@ impl WasmToolEngine {
             .map_err(|e| format!("Fuel error: {}", e))?;
 
         // Instantiate the guest in the sandbox
+        debug!("Instantiating WASM guest in sandbox...");
         let instance = SandboxedTool::instantiate(&mut store, &self.component, &linker)
             .map_err(|e| format!("Instantiation error: {}", e))?;
 
         // Call the guest's execute() function
+        info!("📤 Calling WASM guest execute() function");
         let request = exports::demo::sandbox::tool::Request {
             params: params.to_string(),
         };
@@ -283,18 +330,40 @@ impl WasmToolEngine {
         // Report fuel consumption
         let remaining = store.get_fuel().unwrap_or(0);
         let consumed = self.fuel_limit - remaining;
+        info!(
+            fuel_consumed = consumed,
+            fuel_remaining = remaining,
+            fuel_limit = self.fuel_limit,
+            "⛽ Fuel consumed: {} / {} units", consumed, self.fuel_limit
+        );
         println!(
             "    ⛽ Fuel consumed: {} / {} units",
             consumed, self.fuel_limit
         );
 
+        // Collect guest logs
+        let guest_logs = &store.data().logs;
+        if !guest_logs.is_empty() {
+            debug!(
+                log_count = guest_logs.len(),
+                "WASM guest produced {} log message(s)", guest_logs.len()
+            );
+            for (level, msg) in guest_logs {
+                trace!(wasm_log_level = %level, wasm_log_msg = %msg, "Guest log: [{}] {}", level, msg);
+            }
+        }
+
         // Check response
         if let Some(error) = response.error {
+            error!(error = %error, "WASM tool returned error");
             return Err(format!("Tool error: {}", error));
         }
-        response
+        let output = response
             .output
-            .ok_or_else(|| "Tool returned no output".to_string())
+            .ok_or_else(|| "Tool returned no output".to_string())?;
+        info!(output_len = output.len(), "✅ WASM tool execution succeeded ({} chars output)", output.len());
+        debug!(output = %output, "Full WASM tool output");
+        Ok(output)
     }
 }
 
@@ -325,12 +394,25 @@ impl Tool for WasmTool {
         let params_str = serde_json::to_string(&params)
             .map_err(|e| format!("Failed to serialize params: {}", e))?;
 
+        info!(
+            tool = %self.engine.tool_name,
+            params = %params_str,
+            "🔧 WasmTool::execute() — dispatching to WASM sandbox"
+        );
+
         // Execute in WASM sandbox (synchronous — WASM execution is sync)
         // We use spawn_blocking to avoid blocking the async runtime
         let engine = self.engine.clone();
+        let exec_start = std::time::Instant::now();
         let result = tokio::task::spawn_blocking(move || engine.execute_in_sandbox(&params_str))
             .await
             .map_err(|e| format!("Task join error: {}", e))??;
+        let exec_elapsed = exec_start.elapsed();
+
+        info!(
+            elapsed_ms = exec_elapsed.as_millis(),
+            "WASM sandbox execution completed in {}ms", exec_elapsed.as_millis()
+        );
 
         // Parse the JSON output from the guest
         let value: serde_json::Value = serde_json::from_str(&result)
@@ -351,26 +433,86 @@ pub async fn execute_tool_with_safety(
     tool_name: &str,
     params: serde_json::Value,
 ) -> Result<String, String> {
+    info!(tool = %tool_name, "🔍 Looking up tool in registry");
+
     let tool = registry
         .get(tool_name)
-        .ok_or_else(|| format!("Tool '{}' not found", tool_name))?;
+        .ok_or_else(|| {
+            error!(tool = %tool_name, "Tool '{}' not found in registry", tool_name);
+            format!("Tool '{}' not found", tool_name)
+        })?;
 
+    debug!(
+        tool = %tool_name,
+        params = %serde_json::to_string_pretty(&params).unwrap_or_default(),
+        "Tool found, preparing execution"
+    );
     println!(
         "  ⚙️  Executing tool: {} with params: {}",
         tool_name, params
     );
 
     let timeout = Duration::from_secs(30);
+    info!(
+        tool = %tool_name,
+        timeout_secs = 30,
+        "⏱️  Executing tool with {}s timeout",
+        30
+    );
+
+    let exec_start = std::time::Instant::now();
     let result = tokio::time::timeout(timeout, tool.execute(params)).await;
+    let exec_elapsed = exec_start.elapsed();
 
     match result {
-        Ok(Ok(output)) => serde_json::to_string_pretty(&output.result)
-            .map_err(|e| format!("Failed to serialize result: {}", e)),
-        Ok(Err(e)) => Err(format!("Tool execution failed: {}", e)),
-        Err(_) => Err(format!(
-            "Tool '{}' timed out after {:?}",
-            tool_name, timeout
-        )),
+        Ok(Ok(output)) => {
+            info!(
+                tool = %tool_name,
+                elapsed_ms = exec_elapsed.as_millis(),
+                "✅ Tool execution succeeded in {}ms",
+                exec_elapsed.as_millis()
+            );
+            trace!(
+                tool = %tool_name,
+                raw_output = %serde_json::to_string_pretty(&output.result).unwrap_or_default(),
+                "Raw tool output"
+            );
+            let serialized = serde_json::to_string_pretty(&output.result)
+                .map_err(|e| {
+                    error!(error = %e, "Failed to serialize tool result");
+                    format!("Failed to serialize result: {}", e)
+                })?;
+            debug!(
+                tool = %tool_name,
+                serialized_len = serialized.len(),
+                serialized = %serialized,
+                "Serialized tool output ({} chars)",
+                serialized.len()
+            );
+            Ok(serialized)
+        }
+        Ok(Err(e)) => {
+            error!(
+                tool = %tool_name,
+                elapsed_ms = exec_elapsed.as_millis(),
+                error = %e,
+                "❌ Tool execution failed: {}",
+                e
+            );
+            Err(format!("Tool execution failed: {}", e))
+        }
+        Err(_) => {
+            error!(
+                tool = %tool_name,
+                timeout_secs = 30,
+                "⏰ Tool timed out after {}s",
+                30
+            );
+            Err(format!(
+                "Tool '{}' timed out after {:?}",
+                tool_name, timeout
+            ))
+        }
     }
 }
 
@@ -381,8 +523,38 @@ pub fn process_tool_result(
     result: &Result<String, String>,
 ) -> ChatMessage {
     let content = match result {
-        Ok(output) => format!("<tool_output>{}</tool_output>", output),
-        Err(e) => format!("Error: {}", e),
+        Ok(output) => {
+            let wrapped = format!("<tool_output>{}</tool_output>", output);
+            debug!(
+                tool = %tool_name,
+                tool_call_id = %tool_call_id,
+                content_len = wrapped.len(),
+                "Wrapping tool output in <tool_output> tags ({} chars)",
+                wrapped.len()
+            );
+            trace!(
+                tool = %tool_name,
+                wrapped_content = %wrapped,
+                "Full wrapped tool result"
+            );
+            wrapped
+        }
+        Err(e) => {
+            let error_content = format!("Error: {}", e);
+            warn!(
+                tool = %tool_name,
+                tool_call_id = %tool_call_id,
+                error = %e,
+                "Creating error tool result message"
+            );
+            error_content
+        }
     };
+    info!(
+        tool = %tool_name,
+        tool_call_id = %tool_call_id,
+        is_error = result.is_err(),
+        "📝 Creating tool result ChatMessage (role=Tool)"
+    );
     ChatMessage::tool_result(tool_call_id, tool_name, content)
 }

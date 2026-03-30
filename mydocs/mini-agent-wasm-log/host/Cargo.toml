@@ -28,4 +28,8 @@ dirs = "5"
 wasmtime = { version = "28", features = ["component-model"] }
 wasmtime-wasi = "28"
 
+# Tracing / structured logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+
 [workspace]

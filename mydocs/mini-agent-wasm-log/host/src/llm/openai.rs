@@ -7,6 +7,7 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::Duration;
+use tracing::{debug, info, trace, warn, error};
 
 use super::provider::LlmProvider;
 use super::{ChatMessage, FinishReason, LlmOutput, LlmResponse, Role, ToolCall, ToolDefinition};
@@ -43,10 +44,19 @@ impl HaiConfig {
             let home = dirs::home_dir().ok_or("Cannot determine home directory")?;
             home.join("HAI_WOA.json")
         };
+        debug!(path = %path.display(), "Loading config file");
         let content = std::fs::read_to_string(&path)
             .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
-        serde_json::from_str(&content)
-            .map_err(|e| format!("Failed to parse {}: {}", path.display(), e))
+        trace!(content_len = content.len(), "Config file read successfully");
+        let config: Self = serde_json::from_str(&content)
+            .map_err(|e| format!("Failed to parse {}: {}", path.display(), e))?;
+        debug!(
+            model = %config.model,
+            model_count = config.models.len(),
+            "Config parsed: default model='{}', {} model shortcuts",
+            config.model, config.models.len()
+        );
+        Ok(config)
     }
 
     pub fn api_key(&self) -> Result<String, String> {
@@ -106,6 +116,12 @@ pub struct OpenAiCompatibleProvider {
 
 impl OpenAiCompatibleProvider {
     pub fn new(api_key: String, base_url: String, model: String) -> Self {
+        info!(
+            model = %model,
+            base_url = %base_url,
+            api_key_prefix = %format!("{}...", &api_key[..std::cmp::min(8, api_key.len())]),
+            "Creating OpenAI-compatible provider (timeout=120s)"
+        );
         let client = reqwest::Client::builder()
             .timeout(Duration::from_secs(120))
             .build()
@@ -274,6 +290,13 @@ impl LlmProvider for OpenAiCompatibleProvider {
         tools: &[ToolDefinition],
     ) -> Result<LlmResponse, String> {
         let url = format!("{}/chat/completions", self.base_url);
+        info!(
+            url = %url,
+            model = %self.model,
+            message_count = messages.len(),
+            tool_count = tools.len(),
+            "📤 Preparing LLM API request"
+        );
 
         let openai_tools = Self::convert_tools(tools);
         let body = OpenAiRequest {
@@ -287,6 +310,25 @@ impl LlmProvider for OpenAiCompatibleProvider {
             },
         };
 
+        // Log the full request body at debug level
+        debug!(
+            request_body = %serde_json::to_string_pretty(&body).unwrap_or_else(|_| "<serialization error>".to_string()),
+            "📤 Full OpenAI API request body"
+        );
+        debug!(
+            model = %body.model,
+            message_count = body.messages.len(),
+            tool_count = body.tools.len(),
+            tool_choice = ?body.tool_choice,
+            messages_roles = %body.messages.iter().map(|m| m.role.as_str()).collect::<Vec<_>>().join(" → "),
+            "Request summary: {} messages [{}], {} tools",
+            body.messages.len(),
+            body.messages.iter().map(|m| m.role.as_str()).collect::<Vec<_>>().join(" → "),
+            body.tools.len()
+        );
+
+        info!("🌐 Sending HTTP POST to {}...", url);
+        let http_start = std::time::Instant::now();
         let resp = self
             .client
             .post(&url)
@@ -295,18 +337,50 @@ impl LlmProvider for OpenAiCompatibleProvider {
             .json(&body)
             .send()
             .await
-            .map_err(|e| format!("HTTP request failed: {}", e))?;
+            .map_err(|e| {
+                error!(error = %e, "HTTP request failed");
+                format!("HTTP request failed: {}", e)
+            })?;
+        let http_elapsed = http_start.elapsed();
 
         let status = resp.status();
+        info!(
+            status = %status,
+            elapsed_ms = http_elapsed.as_millis(),
+            "📥 HTTP response received: {} in {}ms",
+            status, http_elapsed.as_millis()
+        );
+
         if !status.is_success() {
             let error_body = resp.text().await.unwrap_or_default();
+            error!(
+                status = %status,
+                error_body = %error_body,
+                "API error response"
+            );
             return Err(format!("API returned {}: {}", status, error_body));
         }
 
-        let openai_resp: OpenAiResponse = resp
-            .json()
-            .await
-            .map_err(|e| format!("Failed to parse response: {}", e))?;
+        // Read raw response for logging
+        let response_text = resp.text().await
+            .map_err(|e| format!("Failed to read response body: {}", e))?;
+        debug!(
+            response_body = %response_text,
+            response_len = response_text.len(),
+            "📥 Raw API response body ({} bytes)", response_text.len()
+        );
+
+        let openai_resp: OpenAiResponse = serde_json::from_str(&response_text)
+            .map_err(|e| {
+                error!(error = %e, response = %response_text, "Failed to parse response JSON");
+                format!("Failed to parse response: {}", e)
+            })?;
+
+        debug!(
+            choice_count = openai_resp.choices.len(),
+            "Parsed response: {} choice(s)",
+            openai_resp.choices.len()
+        );
 
         let choice = openai_resp
             .choices
@@ -314,22 +388,61 @@ impl LlmProvider for OpenAiCompatibleProvider {
             .next()
             .ok_or("No choices in response")?;
 
-        let finish = match choice.finish_reason.as_deref() {
-            Some("stop") => FinishReason::Stop,
-            Some("tool_calls") => FinishReason::ToolUse,
-            Some("length") => FinishReason::Length,
-            _ => FinishReason::Stop,
+        let finish_reason_raw = choice.finish_reason.as_deref().unwrap_or("unknown");
+        let finish = match finish_reason_raw {
+            "stop" => FinishReason::Stop,
+            "tool_calls" => FinishReason::ToolUse,
+            "length" => FinishReason::Length,
+            other => {
+                warn!(finish_reason = %other, "Unknown finish_reason '{}', defaulting to Stop", other);
+                FinishReason::Stop
+            }
         };
+        debug!(
+            finish_reason = %finish_reason_raw,
+            has_content = choice.message.content.is_some(),
+            has_tool_calls = choice.message.tool_calls.is_some(),
+            "Response choice: finish_reason={}, has_content={}, has_tool_calls={}",
+            finish_reason_raw,
+            choice.message.content.is_some(),
+            choice.message.tool_calls.is_some()
+        );
 
         // Check if there are tool calls
         if let Some(tool_calls_in) = choice.message.tool_calls {
             if !tool_calls_in.is_empty() {
+                info!(
+                    tool_call_count = tool_calls_in.len(),
+                    "🔧 LLM requested {} tool call(s)",
+                    tool_calls_in.len()
+                );
                 let tool_calls: Vec<ToolCall> = tool_calls_in
                     .into_iter()
-                    .map(|tc| {
+                    .enumerate()
+                    .map(|(i, tc)| {
+                        debug!(
+                            index = i,
+                            id = %tc.id,
+                            function_name = %tc.function.name,
+                            raw_arguments = %tc.function.arguments,
+                            "Parsing tool call [{}]: {} (id={})",
+                            i, tc.function.name, tc.id
+                        );
                         let arguments: serde_json::Value =
                             serde_json::from_str(&tc.function.arguments)
-                                .unwrap_or(serde_json::Value::Object(serde_json::Map::new()));
+                                .unwrap_or_else(|e| {
+                                    warn!(
+                                        error = %e,
+                                        raw = %tc.function.arguments,
+                                        "Failed to parse tool arguments, using empty object"
+                                    );
+                                    serde_json::Value::Object(serde_json::Map::new())
+                                });
+                        trace!(
+                            parsed_arguments = %serde_json::to_string_pretty(&arguments).unwrap_or_default(),
+                            "Parsed tool arguments for '{}'",
+                            tc.function.name
+                        );
                         ToolCall {
                             id: tc.id,
                             name: tc.function.name,
@@ -337,6 +450,10 @@ impl LlmProvider for OpenAiCompatibleProvider {
                         }
                     })
                     .collect();
+
+                if let Some(ref content) = choice.message.content {
+                    debug!(content = %content, "Assistant also returned text content alongside tool calls");
+                }
 
                 return Ok(LlmResponse {
                     result: LlmOutput::ToolCalls {
@@ -350,6 +467,12 @@ impl LlmProvider for OpenAiCompatibleProvider {
 
         // Text response
         let text = choice.message.content.unwrap_or_default();
+        info!(
+            text_len = text.len(),
+            "💬 LLM returned text response ({} chars)",
+            text.len()
+        );
+        debug!(text = %text, "Full LLM text response");
         Ok(LlmResponse {
             result: LlmOutput::Text(text),
             finish_reason: finish,

@@ -1,0 +1,1331 @@
+   Compiling mini-agent-wasm v0.1.0 (/Users/ericksun/workspace/ironclaw/mydocs/mini-agent-wasm-log/host)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 4.98s
+     Running `host/target/debug/mini-agent-wasm guest/target/wasm32-wasip2/release/guest_tool.wasm`
+2026-03-30T09:41:51.450265Z  INFO main mini_agent_wasm: 🚀 Starting Mini Agent Loop + WASM Sandbox — tracing initialized
+╔══════════════════════════════════════════════════════════════╗
+║      Mini Agent Loop + WASM Sandbox — IronClaw Distilled   ║
+╠══════════════════════════════════════════════════════════════╣
+║                                                            ║
+║  This demo shows the core agentic loop with WASM sandbox:  ║
+║    stdin → LLM → WASM Sandbox Tool → Response → stdout     ║
+║                                                            ║
+║  Tools run inside a Wasmtime WASM sandbox:                 ║
+║    • Fuel-limited (prevents infinite loops)                ║
+║    • No filesystem/network access                          ║
+║    • Can only call host::log() and host::now_millis()      ║
+║    • Fresh instance per execution (no state leak)          ║
+║                                                            ║
+║  Config: ./HAI_WOA.json (or ~/HAI_WOA.json)                ║
+║                                                            ║
+║  Try:                                                      ║
+║    • "What is 42 + 58?"                                    ║
+║    • "Calculate 100 divided by 3"                          ║
+║    • "Hello" (direct response, no tool)                    ║
+║    • "/model <name>" to switch model (ds, qwen, kimi...)   ║
+║    • "/models" to list available models                    ║
+║    • "quit" to exit                                        ║
+║                                                            ║
+╚══════════════════════════════════════════════════════════════╝
+
+2026-03-30T09:41:51.451074Z  INFO main mini_agent_wasm: 🔧 Loading WASM tool... wasm_path=guest/target/wasm32-wasip2/release/guest_tool.wasm
+🔧 Loading WASM tool from: guest/target/wasm32-wasip2/release/guest_tool.wasm
+2026-03-30T09:41:51.451309Z  INFO main mini_agent_wasm::tools: 🔧 Creating WASM tool engine wasm_path=guest/target/wasm32-wasip2/release/guest_tool.wasm fuel_limit=1000000
+2026-03-30T09:41:51.454266Z DEBUG main mini_agent_wasm::tools: Loading WASM bytes from file wasm_path=guest/target/wasm32-wasip2/release/guest_tool.wasm
+2026-03-30T09:41:51.455455Z  INFO main mini_agent_wasm::tools: WASM file loaded (141583 bytes) wasm_size=141583
+2026-03-30T09:41:51.455477Z DEBUG main mini_agent_wasm::tools: Compiling WASM component...
+2026-03-30T09:41:51.877743Z  INFO main mini_agent_wasm::tools: ✅ WASM component compiled successfully
+2026-03-30T09:41:51.877788Z DEBUG main mini_agent_wasm::tools: Instantiating WASM component to read metadata...
+2026-03-30T09:41:51.879493Z  INFO main mini_agent_wasm::tools: ✅ WASM tool metadata loaded: name='calculator' tool_name=calculator tool_description=A sandboxed calculator tool. Performs basic math operations (add, sub, mul, div) inside a WASM sandbox.
+2026-03-30T09:41:51.879543Z DEBUG main mini_agent_wasm::tools: WASM tool schema tool_schema={
+  "properties": {
+    "a": {
+      "description": "First operand",
+      "type": "number"
+    },
+    "b": {
+      "description": "Second operand",
+      "type": "number"
+    },
+    "operation": {
+      "description": "Math operation: add, sub, mul, div",
+      "enum": [
+        "add",
+        "sub",
+        "mul",
+        "div"
+      ],
+      "type": "string"
+    }
+  },
+  "required": [
+    "operation",
+    "a",
+    "b"
+  ],
+  "type": "object"
+}
+2026-03-30T09:41:51.879717Z  INFO main mini_agent_wasm: ✅ WASM tool loaded and compiled tool_name=calculator tool_description=A sandboxed calculator tool. Performs basic math operations (add, sub, mul, div) inside a WASM sandbox. fuel_limit=1000000
+2026-03-30T09:41:51.879735Z DEBUG main mini_agent_wasm: WASM tool schema tool_schema={
+  "properties": {
+    "a": {
+      "description": "First operand",
+      "type": "number"
+    },
+    "b": {
+      "description": "Second operand",
+      "type": "number"
+    },
+    "operation": {
+      "description": "Math operation: add, sub, mul, div",
+      "enum": [
+        "add",
+        "sub",
+        "mul",
+        "div"
+      ],
+      "type": "string"
+    }
+  },
+  "required": [
+    "operation",
+    "a",
+    "b"
+  ],
+  "type": "object"
+}
+✅ WASM tool loaded and compiled
+   Name: calculator
+   Description: A sandboxed calculator tool. Performs basic math operations (add, sub, mul, div) inside a WASM sandbox.
+   Fuel limit: 1000000 units per execution
+
+2026-03-30T09:41:51.879748Z  INFO main mini_agent_wasm: 📂 Loading LLM configuration from HAI_WOA.json ...
+2026-03-30T09:41:51.879773Z DEBUG main mini_agent_wasm::llm::openai: Loading config file path=HAI_WOA.json
+2026-03-30T09:41:51.881252Z TRACE main mini_agent_wasm::llm::openai: Config file read successfully content_len=518
+2026-03-30T09:41:51.881396Z DEBUG main mini_agent_wasm::llm::openai: Config parsed: default model='openai/DeepSeek-V3-0324', 5 model shortcuts model=openai/DeepSeek-V3-0324 model_count=5
+2026-03-30T09:41:51.881442Z  INFO main mini_agent_wasm: ✅ Config loaded successfully model=openai/DeepSeek-V3-0324 base_url=http://api.haihub.cn/v1
+2026-03-30T09:41:51.881449Z DEBUG main mini_agent_wasm: Available model shortcuts available_models=[("ds", "openai/DeepSeek-V3-0324"), ("ds31", "openai/DeepSeek-V3.1"), ("kimi", "openai/Kimi-K2"), ("qwen", "openai/Qwen3-235B-A22B"), ("qwen32", "openai/Qwen3-32B-FP8")]
+✅ Loaded config from ./HAI_WOA.json
+   Model: openai/DeepSeek-V3-0324
+   Base URL: http://api.haihub.cn/v1
+   Available shortcuts: ds → openai/DeepSeek-V3-0324, ds31 → openai/DeepSeek-V3.1, kimi → openai/Kimi-K2, qwen → openai/Qwen3-235B-A22B, qwen32 → openai/Qwen3-32B-FP8
+2026-03-30T09:41:51.881510Z  INFO main mini_agent_wasm: 🤖 Initial model selected current_model=DeepSeek-V3-0324
+2026-03-30T09:41:51.881514Z DEBUG main mini_agent_wasm: Creating new LLM provider instance model=DeepSeek-V3-0324
+2026-03-30T09:41:51.881544Z  INFO main mini_agent_wasm::llm::openai: Creating OpenAI-compatible provider (timeout=120s) model=DeepSeek-V3-0324 base_url=http://api.haihub.cn/v1 api_key_prefix=sk-322ca...
+
+2026-03-30T09:41:51.885440Z DEBUG main mini_agent_wasm::tools: Creating new ToolRegistry
+2026-03-30T09:41:51.885453Z  INFO main mini_agent_wasm::tools: Registering tool: 'calculator' tool_name=calculator
+2026-03-30T09:41:51.885478Z DEBUG main mini_agent_wasm::tools: Tool details tool_name=calculator description=A sandboxed calculator tool. Performs basic math operations (add, sub, mul, div) inside a WASM sandbox. schema={
+  "properties": {
+    "a": {
+      "description": "First operand",
+      "type": "number"
+    },
+    "b": {
+      "description": "Second operand",
+      "type": "number"
+    },
+    "operation": {
+      "description": "Math operation: add, sub, mul, div",
+      "enum": [
+        "add",
+        "sub",
+        "mul",
+        "div"
+      ],
+      "type": "string"
+    }
+  },
+  "required": [
+    "operation",
+    "a",
+    "b"
+  ],
+  "type": "object"
+}
+2026-03-30T09:41:51.885500Z  INFO main mini_agent_wasm: 🔧 Tool registry initialized (WASM sandboxed tools) tools=["calculator"]
+2026-03-30T09:41:51.885539Z DEBUG main mini_agent_wasm: Full tool definitions (sent to LLM) tool_definitions=[
+  {
+    "description": "A sandboxed calculator tool. Performs basic math operations (add, sub, mul, div) inside a WASM sandbox.",
+    "name": "calculator",
+    "parameters": {
+      "properties": {
+        "a": {
+          "description": "First operand",
+          "type": "number"
+        },
+        "b": {
+          "description": "Second operand",
+          "type": "number"
+        },
+        "operation": {
+          "description": "Math operation: add, sub, mul, div",
+          "enum": [
+            "add",
+            "sub",
+            "mul",
+            "div"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "operation",
+        "a",
+        "b"
+      ],
+      "type": "object"
+    }
+  }
+]
+✅ Tool registry ready (WASM sandboxed tools)
+   📦 calculator — A sandboxed calculator tool. Performs basic math operations (add, sub, mul, div) inside a WASM sandbox.
+
+2026-03-30T09:41:51.885564Z  INFO main mini_agent_wasm: ⚙️  Agentic loop config max_iterations=10
+2026-03-30T09:41:51.885569Z  INFO main mini_agent_wasm: 🔄 Entering main input loop — waiting for user input...
+
+🧑 You: 2026-03-30T09:41:51.885581Z  INFO main mini_agent_wasm: 📝 User input received input=What is 42 + 58*99 +(88*12/3)?
+2026-03-30T09:41:51.885586Z  INFO main mini_agent_wasm: 📋 Building conversation context (system prompt + user message)
+2026-03-30T09:41:51.885591Z DEBUG main mini_agent_wasm: Initial messages for agentic loop system_prompt=You are a helpful assistant powered by the DeepSeek-V3-0324 model. You have access to a calculator tool. When the user asks a math question, use the calculator tool to compute the answer. For non-math questions, respond directly. When asked about your identity, truthfully state that you are based on DeepSeek-V3-0324. user_message=What is 42 + 58*99 +(88*12/3)? message_count=2
+2026-03-30T09:41:51.885599Z TRACE main mini_agent_wasm: Full message context before agentic loop messages_detail=
+  [0] SYSTEM | content: "You are a helpful assistant powered by the DeepSeek-V3-0324 model. You have access to a calculator tool. When the user asks a math question, use the calculator tool to compute the answer. For non-math questions, respond directly. When asked about your identity, truthfully state that you are based on DeepSeek-V3-0324."
+  [1] USER | content: "What is 42 + 58*99 +(88*12/3)?"
+2026-03-30T09:41:51.885603Z  INFO main mini_agent_wasm: 🧠 Starting agentic loop (model=DeepSeek-V3-0324, max_iterations=10)
+
+🤖 Agent thinking...
+2026-03-30T09:41:51.885656Z  INFO main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: 🔄 Entering agentic loop tool_count=1 tools=["calculator"] initial_message_count=2
+2026-03-30T09:41:51.885675Z  INFO main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: ━━━ Iteration 1/10 ━━━ iteration=1 max=10 message_count=2
+
+--- Iteration 1/10 ---
+2026-03-30T09:41:51.885685Z  INFO main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: 📤 Step 1: Calling LLM...
+2026-03-30T09:41:51.885691Z DEBUG main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: Sending 2 messages and 1 tool definitions to LLM message_count=2 tool_count=1
+2026-03-30T09:41:51.885701Z TRACE main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: Message flow before LLM call messages_summary=[0]SYS → [1]USR
+2026-03-30T09:41:51.885716Z  INFO main run_agentic_loop{max_iter=10}: mini_agent_wasm::llm::openai: 📤 Preparing LLM API request url=http://api.haihub.cn/v1/chat/completions model=DeepSeek-V3-0324 message_count=2 tool_count=1
+2026-03-30T09:41:51.885761Z DEBUG main run_agentic_loop{max_iter=10}: mini_agent_wasm::llm::openai: 📤 Full OpenAI API request body request_body={
+  "model": "DeepSeek-V3-0324",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a helpful assistant powered by the DeepSeek-V3-0324 model. You have access to a calculator tool. When the user asks a math question, use the calculator tool to compute the answer. For non-math questions, respond directly. When asked about your identity, truthfully state that you are based on DeepSeek-V3-0324."
+    },
+    {
+      "role": "user",
+      "content": "What is 42 + 58*99 +(88*12/3)?"
+    }
+  ],
+  "tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "calculator",
+        "description": "A sandboxed calculator tool. Performs basic math operations (add, sub, mul, div) inside a WASM sandbox.",
+        "parameters": {
+          "properties": {
+            "a": {
+              "description": "First operand",
+              "type": "number"
+            },
+            "b": {
+              "description": "Second operand",
+              "type": "number"
+            },
+            "operation": {
+              "description": "Math operation: add, sub, mul, div",
+              "enum": [
+                "add",
+                "sub",
+                "mul",
+                "div"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "operation",
+            "a",
+            "b"
+          ],
+          "type": "object"
+        }
+      }
+    }
+  ],
+  "tool_choice": "auto"
+}
+2026-03-30T09:41:51.885775Z DEBUG main run_agentic_loop{max_iter=10}: mini_agent_wasm::llm::openai: Request summary: 2 messages [system → user], 1 tools model=DeepSeek-V3-0324 message_count=2 tool_count=1 tool_choice=Some("auto") messages_roles=system → user
+2026-03-30T09:41:51.885783Z  INFO main run_agentic_loop{max_iter=10}: mini_agent_wasm::llm::openai: 🌐 Sending HTTP POST to http://api.haihub.cn/v1/chat/completions...
+2026-03-30T09:41:53.582935Z  INFO main run_agentic_loop{max_iter=10}: mini_agent_wasm::llm::openai: 📥 HTTP response received: 200 OK in 1697ms status=200 OK elapsed_ms=1697
+2026-03-30T09:41:53.583319Z DEBUG main run_agentic_loop{max_iter=10}: mini_agent_wasm::llm::openai: 📥 Raw API response body (940 bytes) response_body={"id":"99bd3df2905440a8a99910b4f9ca1ea8","object":"chat.completion","created":1774863713,"model":"DeepSeek-V3-0324","choices":[{"index":0,"message":{"role":"assistant","content":null,"reasoning_content":null,"tool_calls":[{"id":"call_a2692f5195fe4959b826feea","index":-1,"type":"function","function":{"name":"calculator","arguments":"{\"a\": 58, \"b\": 99, \"operation\": \"mul\"}"}},{"id":"call_71b4f044098742e2b42d3c14","index":-1,"type":"function","function":{"name":"calculator","arguments":"{\"a\": 88, \"b\": 12, \"operation\": \"mul\"}"}},{"id":"call_17524402ed354144b7117b95","index":-1,"type":"function","function":{"name":"calculator","arguments":"{\"a\": 1056, \"b\": 3, \"operation\": \"div\"}"}}]},"logprobs":null,"finish_reason":"tool_calls","matched_stop":null}],"usage":{"prompt_tokens":316,"total_tokens":406,"completion_tokens":90,"prompt_tokens_details":null,"reasoning_tokens":0},"metadata":{"weight_version":"default"}} response_len=940
+2026-03-30T09:41:53.583443Z DEBUG main run_agentic_loop{max_iter=10}: mini_agent_wasm::llm::openai: Parsed response: 1 choice(s) choice_count=1
+2026-03-30T09:41:53.583468Z DEBUG main run_agentic_loop{max_iter=10}: mini_agent_wasm::llm::openai: Response choice: finish_reason=tool_calls, has_content=false, has_tool_calls=true finish_reason=tool_calls has_content=false has_tool_calls=true
+2026-03-30T09:41:53.583492Z  INFO main run_agentic_loop{max_iter=10}: mini_agent_wasm::llm::openai: 🔧 LLM requested 3 tool call(s) tool_call_count=3
+2026-03-30T09:41:53.583514Z DEBUG main run_agentic_loop{max_iter=10}: mini_agent_wasm::llm::openai: Parsing tool call [0]: calculator (id=call_a2692f5195fe4959b826feea) index=0 id=call_a2692f5195fe4959b826feea function_name=calculator raw_arguments={"a": 58, "b": 99, "operation": "mul"}
+2026-03-30T09:41:53.583570Z TRACE main run_agentic_loop{max_iter=10}: mini_agent_wasm::llm::openai: Parsed tool arguments for 'calculator' parsed_arguments={
+  "a": 58,
+  "b": 99,
+  "operation": "mul"
+}
+2026-03-30T09:41:53.583588Z DEBUG main run_agentic_loop{max_iter=10}: mini_agent_wasm::llm::openai: Parsing tool call [1]: calculator (id=call_71b4f044098742e2b42d3c14) index=1 id=call_71b4f044098742e2b42d3c14 function_name=calculator raw_arguments={"a": 88, "b": 12, "operation": "mul"}
+2026-03-30T09:41:53.583618Z TRACE main run_agentic_loop{max_iter=10}: mini_agent_wasm::llm::openai: Parsed tool arguments for 'calculator' parsed_arguments={
+  "a": 88,
+  "b": 12,
+  "operation": "mul"
+}
+2026-03-30T09:41:53.583664Z DEBUG main run_agentic_loop{max_iter=10}: mini_agent_wasm::llm::openai: Parsing tool call [2]: calculator (id=call_17524402ed354144b7117b95) index=2 id=call_17524402ed354144b7117b95 function_name=calculator raw_arguments={"a": 1056, "b": 3, "operation": "div"}
+2026-03-30T09:41:53.583695Z TRACE main run_agentic_loop{max_iter=10}: mini_agent_wasm::llm::openai: Parsed tool arguments for 'calculator' parsed_arguments={
+  "a": 1056,
+  "b": 3,
+  "operation": "div"
+}
+2026-03-30T09:41:53.583731Z  INFO main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: 📥 LLM responded in 1698ms (finish_reason=ToolUse) elapsed_ms=1698 finish_reason=ToolUse
+2026-03-30T09:41:53.583780Z  INFO main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: 🔧 LLM returned TOOL CALLS (3 tool(s)) tool_call_count=3 has_content=false
+2026-03-30T09:41:53.583909Z DEBUG main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: Tool call [0]: calculator (id=call_a2692f5195fe4959b826feea) index=0 tool_name=calculator tool_call_id=call_a2692f5195fe4959b826feea arguments={
+  "a": 58,
+  "b": 99,
+  "operation": "mul"
+}
+2026-03-30T09:41:53.583954Z DEBUG main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: Tool call [1]: calculator (id=call_71b4f044098742e2b42d3c14) index=1 tool_name=calculator tool_call_id=call_71b4f044098742e2b42d3c14 arguments={
+  "a": 88,
+  "b": 12,
+  "operation": "mul"
+}
+2026-03-30T09:41:53.583986Z DEBUG main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: Tool call [2]: calculator (id=call_17524402ed354144b7117b95) index=2 tool_name=calculator tool_call_id=call_17524402ed354144b7117b95 arguments={
+  "a": 1056,
+  "b": 3,
+  "operation": "div"
+}
+  🔧 LLM wants to call 3 tool(s)
+2026-03-30T09:41:53.584018Z  INFO main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: 📝 Adding assistant message with tool calls to conversation context
+2026-03-30T09:41:53.584057Z DEBUG main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: Context now has 3 messages (after adding assistant tool call message) message_count=3
+2026-03-30T09:41:53.584079Z  INFO main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: ⚙️  Executing tool [1/3]: calculator index=0 tool=calculator
+2026-03-30T09:41:53.584107Z DEBUG main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: Tool execution input tool_name=calculator tool_call_id=call_a2692f5195fe4959b826feea arguments={
+  "a": 58,
+  "b": 99,
+  "operation": "mul"
+}
+2026-03-30T09:41:53.584133Z  INFO main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: 🔍 Looking up tool in registry tool=calculator
+2026-03-30T09:41:53.584163Z DEBUG main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: Tool found, preparing execution tool=calculator params={
+  "a": 58,
+  "b": 99,
+  "operation": "mul"
+}
+  ⚙️  Executing tool: calculator with params: {"a":58,"b":99,"operation":"mul"}
+2026-03-30T09:41:53.584202Z  INFO main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: ⏱️  Executing tool with 30s timeout tool=calculator timeout_secs=30
+2026-03-30T09:41:53.584236Z  INFO main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: 🔧 WasmTool::execute() — dispatching to WASM sandbox tool=calculator params={"a":58,"b":99,"operation":"mul"}
+2026-03-30T09:41:53.584761Z  INFO tokio-rt-worker mini_agent_wasm::tools: 🏖️  Executing tool in WASM sandbox tool=calculator params={"a":58,"b":99,"operation":"mul"} fuel_limit=1000000
+2026-03-30T09:41:53.585856Z DEBUG tokio-rt-worker mini_agent_wasm::tools: Creating fresh WASM store (complete isolation)
+2026-03-30T09:41:53.586133Z DEBUG tokio-rt-worker mini_agent_wasm::tools: Instantiating WASM guest in sandbox...
+2026-03-30T09:41:53.586688Z  INFO tokio-rt-worker mini_agent_wasm::tools: 📤 Calling WASM guest execute() function
+2026-03-30T09:41:53.587165Z  INFO tokio-rt-worker mini_agent_wasm::tools: 📋 [WASM LOG] [INFO] Calculating: 58 mul 99 wasm_log_level=INFO wasm_message=Calculating: 58 mul 99
+    📋 [WASM LOG] [INFO] Calculating: 58 mul 99
+2026-03-30T09:41:53.587263Z TRACE tokio-rt-worker mini_agent_wasm::tools: WASM guest called now_millis() millis=1774863713587
+2026-03-30T09:41:53.587331Z  INFO tokio-rt-worker mini_agent_wasm::tools: 📋 [WASM LOG] [INFO] Result: 5742 (at timestamp 1774863713587) wasm_log_level=INFO wasm_message=Result: 5742 (at timestamp 1774863713587)
+    📋 [WASM LOG] [INFO] Result: 5742 (at timestamp 1774863713587)
+2026-03-30T09:41:53.587413Z  INFO tokio-rt-worker mini_agent_wasm::tools: ⛽ Fuel consumed: 15975 / 1000000 units fuel_consumed=15975 fuel_remaining=984025 fuel_limit=1000000
+    ⛽ Fuel consumed: 15975 / 1000000 units
+2026-03-30T09:41:53.587433Z DEBUG tokio-rt-worker mini_agent_wasm::tools: WASM guest produced 2 log message(s) log_count=2
+2026-03-30T09:41:53.587445Z TRACE tokio-rt-worker mini_agent_wasm::tools: Guest log: [INFO] Calculating: 58 mul 99 wasm_log_level=INFO wasm_log_msg=Calculating: 58 mul 99
+2026-03-30T09:41:53.587457Z TRACE tokio-rt-worker mini_agent_wasm::tools: Guest log: [INFO] Result: 5742 (at timestamp 1774863713587) wasm_log_level=INFO wasm_log_msg=Result: 5742 (at timestamp 1774863713587)
+2026-03-30T09:41:53.587471Z  INFO tokio-rt-worker mini_agent_wasm::tools: ✅ WASM tool execution succeeded (77 chars output) output_len=77
+2026-03-30T09:41:53.587482Z DEBUG tokio-rt-worker mini_agent_wasm::tools: Full WASM tool output output={"expression":"58 × 99 = 5742","result":5742.0,"timestamp_ms":1774863713587}
+2026-03-30T09:41:53.587934Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: WASM sandbox execution completed in 3ms elapsed_ms=3
+2026-03-30T09:41:53.588051Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: ✅ Tool execution succeeded in 3ms tool=calculator elapsed_ms=3
+2026-03-30T09:41:53.588126Z TRACE            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: Raw tool output tool=calculator raw_output={
+  "expression": "58 × 99 = 5742",
+  "result": 5742.0,
+  "timestamp_ms": 1774863713587
+}
+2026-03-30T09:41:53.588160Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: Serialized tool output (90 chars) tool=calculator serialized_len=90 serialized={
+  "expression": "58 × 99 = 5742",
+  "result": 5742.0,
+  "timestamp_ms": 1774863713587
+}
+2026-03-30T09:41:53.588198Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: Wrapping tool output in <tool_output> tags (117 chars) tool=calculator tool_call_id=call_a2692f5195fe4959b826feea content_len=117
+2026-03-30T09:41:53.588222Z TRACE            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: Full wrapped tool result tool=calculator wrapped_content=<tool_output>{
+  "expression": "58 × 99 = 5742",
+  "result": 5742.0,
+  "timestamp_ms": 1774863713587
+}</tool_output>
+2026-03-30T09:41:53.588241Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: 📝 Creating tool result ChatMessage (role=Tool) tool=calculator tool_call_id=call_a2692f5195fe4959b826feea is_error=false
+2026-03-30T09:41:53.588270Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: ✅ Tool 'calculator' succeeded in 4ms (90 chars output) tool=calculator elapsed_ms=4 output_len=90
+2026-03-30T09:41:53.588294Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: Full tool output tool=calculator output={
+  "expression": "58 × 99 = 5742",
+  "result": 5742.0,
+  "timestamp_ms": 1774863713587
+}
+  ✅ Tool 'calculator' succeeded: {
+  "expression": "58 × 99 = 5742",
+  "result": 5742.0,
+  "timestamp_ms": 17748[...]
+2026-03-30T09:41:53.588328Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: 📝 Adding tool result for 'calculator' (call_id=call_a2692f5195fe4959b826feea) to conversation context
+2026-03-30T09:41:53.588351Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: Context now has 4 messages (after adding tool result) message_count=4
+2026-03-30T09:41:53.588371Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: ⚙️  Executing tool [2/3]: calculator index=1 tool=calculator
+2026-03-30T09:41:53.588417Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: Tool execution input tool_name=calculator tool_call_id=call_71b4f044098742e2b42d3c14 arguments={
+  "a": 88,
+  "b": 12,
+  "operation": "mul"
+}
+2026-03-30T09:41:53.588438Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: 🔍 Looking up tool in registry tool=calculator
+2026-03-30T09:41:53.588460Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: Tool found, preparing execution tool=calculator params={
+  "a": 88,
+  "b": 12,
+  "operation": "mul"
+}
+  ⚙️  Executing tool: calculator with params: {"a":88,"b":12,"operation":"mul"}
+2026-03-30T09:41:53.588488Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: ⏱️  Executing tool with 30s timeout tool=calculator timeout_secs=30
+2026-03-30T09:41:53.588515Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: 🔧 WasmTool::execute() — dispatching to WASM sandbox tool=calculator params={"a":88,"b":12,"operation":"mul"}
+2026-03-30T09:41:53.588571Z  INFO tokio-rt-worker mini_agent_wasm::tools: 🏖️  Executing tool in WASM sandbox tool=calculator params={"a":88,"b":12,"operation":"mul"} fuel_limit=1000000
+2026-03-30T09:41:53.589886Z DEBUG tokio-rt-worker mini_agent_wasm::tools: Creating fresh WASM store (complete isolation)
+2026-03-30T09:41:53.590076Z DEBUG tokio-rt-worker mini_agent_wasm::tools: Instantiating WASM guest in sandbox...
+2026-03-30T09:41:53.590520Z  INFO tokio-rt-worker mini_agent_wasm::tools: 📤 Calling WASM guest execute() function
+2026-03-30T09:41:53.590609Z  INFO tokio-rt-worker mini_agent_wasm::tools: 📋 [WASM LOG] [INFO] Calculating: 88 mul 12 wasm_log_level=INFO wasm_message=Calculating: 88 mul 12
+    📋 [WASM LOG] [INFO] Calculating: 88 mul 12
+2026-03-30T09:41:53.590648Z TRACE tokio-rt-worker mini_agent_wasm::tools: WASM guest called now_millis() millis=1774863713590
+2026-03-30T09:41:53.590672Z  INFO tokio-rt-worker mini_agent_wasm::tools: 📋 [WASM LOG] [INFO] Result: 1056 (at timestamp 1774863713590) wasm_log_level=INFO wasm_message=Result: 1056 (at timestamp 1774863713590)
+    📋 [WASM LOG] [INFO] Result: 1056 (at timestamp 1774863713590)
+2026-03-30T09:41:53.590719Z  INFO tokio-rt-worker mini_agent_wasm::tools: ⛽ Fuel consumed: 15975 / 1000000 units fuel_consumed=15975 fuel_remaining=984025 fuel_limit=1000000
+    ⛽ Fuel consumed: 15975 / 1000000 units
+2026-03-30T09:41:53.590738Z DEBUG tokio-rt-worker mini_agent_wasm::tools: WASM guest produced 2 log message(s) log_count=2
+2026-03-30T09:41:53.590749Z TRACE tokio-rt-worker mini_agent_wasm::tools: Guest log: [INFO] Calculating: 88 mul 12 wasm_log_level=INFO wasm_log_msg=Calculating: 88 mul 12
+2026-03-30T09:41:53.590760Z TRACE tokio-rt-worker mini_agent_wasm::tools: Guest log: [INFO] Result: 1056 (at timestamp 1774863713590) wasm_log_level=INFO wasm_log_msg=Result: 1056 (at timestamp 1774863713590)
+2026-03-30T09:41:53.590773Z  INFO tokio-rt-worker mini_agent_wasm::tools: ✅ WASM tool execution succeeded (77 chars output) output_len=77
+2026-03-30T09:41:53.590783Z DEBUG tokio-rt-worker mini_agent_wasm::tools: Full WASM tool output output={"expression":"88 × 12 = 1056","result":1056.0,"timestamp_ms":1774863713590}
+2026-03-30T09:41:53.591048Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: WASM sandbox execution completed in 2ms elapsed_ms=2
+2026-03-30T09:41:53.591111Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: ✅ Tool execution succeeded in 2ms tool=calculator elapsed_ms=2
+2026-03-30T09:41:53.591144Z TRACE            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: Raw tool output tool=calculator raw_output={
+  "expression": "88 × 12 = 1056",
+  "result": 1056.0,
+  "timestamp_ms": 1774863713590
+}
+2026-03-30T09:41:53.591167Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: Serialized tool output (90 chars) tool=calculator serialized_len=90 serialized={
+  "expression": "88 × 12 = 1056",
+  "result": 1056.0,
+  "timestamp_ms": 1774863713590
+}
+2026-03-30T09:41:53.591211Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: Wrapping tool output in <tool_output> tags (117 chars) tool=calculator tool_call_id=call_71b4f044098742e2b42d3c14 content_len=117
+2026-03-30T09:41:53.591229Z TRACE            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: Full wrapped tool result tool=calculator wrapped_content=<tool_output>{
+  "expression": "88 × 12 = 1056",
+  "result": 1056.0,
+  "timestamp_ms": 1774863713590
+}</tool_output>
+2026-03-30T09:41:53.591244Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: 📝 Creating tool result ChatMessage (role=Tool) tool=calculator tool_call_id=call_71b4f044098742e2b42d3c14 is_error=false
+2026-03-30T09:41:53.591261Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: ✅ Tool 'calculator' succeeded in 2ms (90 chars output) tool=calculator elapsed_ms=2 output_len=90
+2026-03-30T09:41:53.591277Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: Full tool output tool=calculator output={
+  "expression": "88 × 12 = 1056",
+  "result": 1056.0,
+  "timestamp_ms": 1774863713590
+}
+  ✅ Tool 'calculator' succeeded: {
+  "expression": "88 × 12 = 1056",
+  "result": 1056.0,
+  "timestamp_ms": 17748[...]
+2026-03-30T09:41:53.591299Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: 📝 Adding tool result for 'calculator' (call_id=call_71b4f044098742e2b42d3c14) to conversation context
+2026-03-30T09:41:53.591324Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: Context now has 5 messages (after adding tool result) message_count=5
+2026-03-30T09:41:53.591339Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: ⚙️  Executing tool [3/3]: calculator index=2 tool=calculator
+2026-03-30T09:41:53.591359Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: Tool execution input tool_name=calculator tool_call_id=call_17524402ed354144b7117b95 arguments={
+  "a": 1056,
+  "b": 3,
+  "operation": "div"
+}
+2026-03-30T09:41:53.591376Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: 🔍 Looking up tool in registry tool=calculator
+2026-03-30T09:41:53.591395Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: Tool found, preparing execution tool=calculator params={
+  "a": 1056,
+  "b": 3,
+  "operation": "div"
+}
+  ⚙️  Executing tool: calculator with params: {"a":1056,"b":3,"operation":"div"}
+2026-03-30T09:41:53.591421Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: ⏱️  Executing tool with 30s timeout tool=calculator timeout_secs=30
+2026-03-30T09:41:53.591444Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: 🔧 WasmTool::execute() — dispatching to WASM sandbox tool=calculator params={"a":1056,"b":3,"operation":"div"}
+2026-03-30T09:41:53.591493Z  INFO tokio-rt-worker mini_agent_wasm::tools: 🏖️  Executing tool in WASM sandbox tool=calculator params={"a":1056,"b":3,"operation":"div"} fuel_limit=1000000
+2026-03-30T09:41:53.592138Z DEBUG tokio-rt-worker mini_agent_wasm::tools: Creating fresh WASM store (complete isolation)
+2026-03-30T09:41:53.592258Z DEBUG tokio-rt-worker mini_agent_wasm::tools: Instantiating WASM guest in sandbox...
+2026-03-30T09:41:53.592546Z  INFO tokio-rt-worker mini_agent_wasm::tools: 📤 Calling WASM guest execute() function
+2026-03-30T09:41:53.592589Z  INFO tokio-rt-worker mini_agent_wasm::tools: 📋 [WASM LOG] [INFO] Calculating: 1056 div 3 wasm_log_level=INFO wasm_message=Calculating: 1056 div 3
+    📋 [WASM LOG] [INFO] Calculating: 1056 div 3
+2026-03-30T09:41:53.592611Z TRACE tokio-rt-worker mini_agent_wasm::tools: WASM guest called now_millis() millis=1774863713592
+2026-03-30T09:41:53.592629Z  INFO tokio-rt-worker mini_agent_wasm::tools: 📋 [WASM LOG] [INFO] Result: 352 (at timestamp 1774863713592) wasm_log_level=INFO wasm_message=Result: 352 (at timestamp 1774863713592)
+    📋 [WASM LOG] [INFO] Result: 352 (at timestamp 1774863713592)
+2026-03-30T09:41:53.592680Z  INFO tokio-rt-worker mini_agent_wasm::tools: ⛽ Fuel consumed: 16061 / 1000000 units fuel_consumed=16061 fuel_remaining=983939 fuel_limit=1000000
+    ⛽ Fuel consumed: 16061 / 1000000 units
+2026-03-30T09:41:53.592694Z DEBUG tokio-rt-worker mini_agent_wasm::tools: WASM guest produced 2 log message(s) log_count=2
+2026-03-30T09:41:53.592703Z TRACE tokio-rt-worker mini_agent_wasm::tools: Guest log: [INFO] Calculating: 1056 div 3 wasm_log_level=INFO wasm_log_msg=Calculating: 1056 div 3
+2026-03-30T09:41:53.592712Z TRACE tokio-rt-worker mini_agent_wasm::tools: Guest log: [INFO] Result: 352 (at timestamp 1774863713592) wasm_log_level=INFO wasm_log_msg=Result: 352 (at timestamp 1774863713592)
+2026-03-30T09:41:53.592721Z  INFO tokio-rt-worker mini_agent_wasm::tools: ✅ WASM tool execution succeeded (76 chars output) output_len=76
+2026-03-30T09:41:53.592729Z DEBUG tokio-rt-worker mini_agent_wasm::tools: Full WASM tool output output={"expression":"1056 ÷ 3 = 352","result":352.0,"timestamp_ms":1774863713592}
+2026-03-30T09:41:53.592881Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: WASM sandbox execution completed in 1ms elapsed_ms=1
+2026-03-30T09:41:53.592910Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: ✅ Tool execution succeeded in 1ms tool=calculator elapsed_ms=1
+2026-03-30T09:41:53.592929Z TRACE            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: Raw tool output tool=calculator raw_output={
+  "expression": "1056 ÷ 3 = 352",
+  "result": 352.0,
+  "timestamp_ms": 1774863713592
+}
+2026-03-30T09:41:53.592947Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: Serialized tool output (89 chars) tool=calculator serialized_len=89 serialized={
+  "expression": "1056 ÷ 3 = 352",
+  "result": 352.0,
+  "timestamp_ms": 1774863713592
+}
+2026-03-30T09:41:53.592962Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: Wrapping tool output in <tool_output> tags (116 chars) tool=calculator tool_call_id=call_17524402ed354144b7117b95 content_len=116
+2026-03-30T09:41:53.592976Z TRACE            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: Full wrapped tool result tool=calculator wrapped_content=<tool_output>{
+  "expression": "1056 ÷ 3 = 352",
+  "result": 352.0,
+  "timestamp_ms": 1774863713592
+}</tool_output>
+2026-03-30T09:41:53.592987Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: 📝 Creating tool result ChatMessage (role=Tool) tool=calculator tool_call_id=call_17524402ed354144b7117b95 is_error=false
+2026-03-30T09:41:53.593001Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: ✅ Tool 'calculator' succeeded in 1ms (89 chars output) tool=calculator elapsed_ms=1 output_len=89
+2026-03-30T09:41:53.593014Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: Full tool output tool=calculator output={
+  "expression": "1056 ÷ 3 = 352",
+  "result": 352.0,
+  "timestamp_ms": 1774863713592
+}
+  ✅ Tool 'calculator' succeeded: {
+  "expression": "1056 ÷ 3 = 352",
+  "result": 352.0,
+  "timestamp_ms": 177486[...]
+2026-03-30T09:41:53.593031Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: 📝 Adding tool result for 'calculator' (call_id=call_17524402ed354144b7117b95) to conversation context
+2026-03-30T09:41:53.593044Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: Context now has 6 messages (after adding tool result) message_count=6
+2026-03-30T09:41:53.593059Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: 🔄 All tools executed. Looping back to LLM with updated context (6 messages) message_count=6
+2026-03-30T09:41:53.593076Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: ━━━ Iteration 2/10 ━━━ iteration=2 max=10 message_count=6
+
+--- Iteration 2/10 ---
+2026-03-30T09:41:53.593094Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: 📤 Step 1: Calling LLM...
+2026-03-30T09:41:53.593112Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: Sending 6 messages and 1 tool definitions to LLM message_count=6 tool_count=1
+2026-03-30T09:41:53.593138Z TRACE            main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: Message flow before LLM call messages_summary=[0]SYS → [1]USR → [2]AST → [3]TOL → [4]TOL → [5]TOL
+2026-03-30T09:41:53.593153Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::llm::openai: 📤 Preparing LLM API request url=http://api.haihub.cn/v1/chat/completions model=DeepSeek-V3-0324 message_count=6 tool_count=1
+2026-03-30T09:41:53.593348Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::llm::openai: 📤 Full OpenAI API request body request_body={
+  "model": "DeepSeek-V3-0324",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a helpful assistant powered by the DeepSeek-V3-0324 model. You have access to a calculator tool. When the user asks a math question, use the calculator tool to compute the answer. For non-math questions, respond directly. When asked about your identity, truthfully state that you are based on DeepSeek-V3-0324."
+    },
+    {
+      "role": "user",
+      "content": "What is 42 + 58*99 +(88*12/3)?"
+    },
+    {
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_a2692f5195fe4959b826feea",
+          "type": "function",
+          "function": {
+            "name": "calculator",
+            "arguments": "{\"a\":58,\"b\":99,\"operation\":\"mul\"}"
+          }
+        },
+        {
+          "id": "call_71b4f044098742e2b42d3c14",
+          "type": "function",
+          "function": {
+            "name": "calculator",
+            "arguments": "{\"a\":88,\"b\":12,\"operation\":\"mul\"}"
+          }
+        },
+        {
+          "id": "call_17524402ed354144b7117b95",
+          "type": "function",
+          "function": {
+            "name": "calculator",
+            "arguments": "{\"a\":1056,\"b\":3,\"operation\":\"div\"}"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "content": "<tool_output>{\n  \"expression\": \"58 × 99 = 5742\",\n  \"result\": 5742.0,\n  \"timestamp_ms\": 1774863713587\n}</tool_output>",
+      "tool_call_id": "call_a2692f5195fe4959b826feea",
+      "name": "calculator"
+    },
+    {
+      "role": "tool",
+      "content": "<tool_output>{\n  \"expression\": \"88 × 12 = 1056\",\n  \"result\": 1056.0,\n  \"timestamp_ms\": 1774863713590\n}</tool_output>",
+      "tool_call_id": "call_71b4f044098742e2b42d3c14",
+      "name": "calculator"
+    },
+    {
+      "role": "tool",
+      "content": "<tool_output>{\n  \"expression\": \"1056 ÷ 3 = 352\",\n  \"result\": 352.0,\n  \"timestamp_ms\": 1774863713592\n}</tool_output>",
+      "tool_call_id": "call_17524402ed354144b7117b95",
+      "name": "calculator"
+    }
+  ],
+  "tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "calculator",
+        "description": "A sandboxed calculator tool. Performs basic math operations (add, sub, mul, div) inside a WASM sandbox.",
+        "parameters": {
+          "properties": {
+            "a": {
+              "description": "First operand",
+              "type": "number"
+            },
+            "b": {
+              "description": "Second operand",
+              "type": "number"
+            },
+            "operation": {
+              "description": "Math operation: add, sub, mul, div",
+              "enum": [
+                "add",
+                "sub",
+                "mul",
+                "div"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "operation",
+            "a",
+            "b"
+          ],
+          "type": "object"
+        }
+      }
+    }
+  ],
+  "tool_choice": "auto"
+}
+2026-03-30T09:41:53.593373Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::llm::openai: Request summary: 6 messages [system → user → assistant → tool → tool → tool], 1 tools model=DeepSeek-V3-0324 message_count=6 tool_count=1 tool_choice=Some("auto") messages_roles=system → user → assistant → tool → tool → tool
+2026-03-30T09:41:53.593399Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::llm::openai: 🌐 Sending HTTP POST to http://api.haihub.cn/v1/chat/completions...
+2026-03-30T09:41:55.823822Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::llm::openai: 📥 HTTP response received: 200 OK in 2230ms status=200 OK elapsed_ms=2230
+2026-03-30T09:41:55.824254Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::llm::openai: 📥 Raw API response body (1441 bytes) response_body={"id":"c56886a2c19c4f6ba8b85cad0a58bf20","object":"chat.completion","created":1774863716,"model":"DeepSeek-V3-0324","choices":[{"index":0,"message":{"role":"assistant","content":null,"reasoning_content":null,"tool_calls":[{"id":"call_ec9a266e95d84676993188ac","index":-1,"type":"function","function":{"name":"calculator","arguments":"{\"a\": 42, \"b\": 5742, \"operation\": \"add\"}"}},{"id":"call_d5bae0fdaffe4f2e86b48ef8","index":-1,"type":"function","function":{"name":"calculator","arguments":"{\"a\": 5784, \"b\": 352, \"operation\": \"add\"}"}},{"id":"call_f19f56c397604f3abac4926a","index":-1,"type":"function","function":{"name":"calculator","arguments":"{\"a\": 42, \"b\": 5742, \"operation\": \"add\"}"}},{"id":"call_9825c9a1cd54497fae92b91c","index":-1,"type":"function","function":{"name":"calculator","arguments":"{\"a\": 5784, \"b\": 352, \"operation\": \"add\"}"}},{"id":"call_f5f56ba93e0e4198a26ef770","index":-1,"type":"function","function":{"name":"calculator","arguments":"{\"a\": 42, \"b\": 5742, \"operation\": \"add\"}"}},{"id":"call_4ee872b1f040492e9d5af418","index":-1,"type":"function","function":{"name":"calculator","arguments":"{\"a\": 5784, \"b\": 352, \"operation\": \"add\"}"}}]},"logprobs":null,"finish_reason":"tool_calls","matched_stop":null}],"usage":{"prompt_tokens":569,"total_tokens":789,"completion_tokens":220,"prompt_tokens_details":null,"reasoning_tokens":0},"metadata":{"weight_version":"default"}} response_len=1441
+2026-03-30T09:41:55.824452Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::llm::openai: Parsed response: 1 choice(s) choice_count=1
+2026-03-30T09:41:55.824485Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::llm::openai: Response choice: finish_reason=tool_calls, has_content=false, has_tool_calls=true finish_reason=tool_calls has_content=false has_tool_calls=true
+2026-03-30T09:41:55.824517Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::llm::openai: 🔧 LLM requested 6 tool call(s) tool_call_count=6
+2026-03-30T09:41:55.824550Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::llm::openai: Parsing tool call [0]: calculator (id=call_ec9a266e95d84676993188ac) index=0 id=call_ec9a266e95d84676993188ac function_name=calculator raw_arguments={"a": 42, "b": 5742, "operation": "add"}
+2026-03-30T09:41:55.824669Z TRACE            main run_agentic_loop{max_iter=10}: mini_agent_wasm::llm::openai: Parsed tool arguments for 'calculator' parsed_arguments={
+  "a": 42,
+  "b": 5742,
+  "operation": "add"
+}
+2026-03-30T09:41:55.824713Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::llm::openai: Parsing tool call [1]: calculator (id=call_d5bae0fdaffe4f2e86b48ef8) index=1 id=call_d5bae0fdaffe4f2e86b48ef8 function_name=calculator raw_arguments={"a": 5784, "b": 352, "operation": "add"}
+2026-03-30T09:41:55.824790Z TRACE            main run_agentic_loop{max_iter=10}: mini_agent_wasm::llm::openai: Parsed tool arguments for 'calculator' parsed_arguments={
+  "a": 5784,
+  "b": 352,
+  "operation": "add"
+}
+2026-03-30T09:41:55.824836Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::llm::openai: Parsing tool call [2]: calculator (id=call_f19f56c397604f3abac4926a) index=2 id=call_f19f56c397604f3abac4926a function_name=calculator raw_arguments={"a": 42, "b": 5742, "operation": "add"}
+2026-03-30T09:41:55.824963Z TRACE            main run_agentic_loop{max_iter=10}: mini_agent_wasm::llm::openai: Parsed tool arguments for 'calculator' parsed_arguments={
+  "a": 42,
+  "b": 5742,
+  "operation": "add"
+}
+2026-03-30T09:41:55.825005Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::llm::openai: Parsing tool call [3]: calculator (id=call_9825c9a1cd54497fae92b91c) index=3 id=call_9825c9a1cd54497fae92b91c function_name=calculator raw_arguments={"a": 5784, "b": 352, "operation": "add"}
+2026-03-30T09:41:55.825092Z TRACE            main run_agentic_loop{max_iter=10}: mini_agent_wasm::llm::openai: Parsed tool arguments for 'calculator' parsed_arguments={
+  "a": 5784,
+  "b": 352,
+  "operation": "add"
+}
+2026-03-30T09:41:55.825133Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::llm::openai: Parsing tool call [4]: calculator (id=call_f5f56ba93e0e4198a26ef770) index=4 id=call_f5f56ba93e0e4198a26ef770 function_name=calculator raw_arguments={"a": 42, "b": 5742, "operation": "add"}
+2026-03-30T09:41:55.825209Z TRACE            main run_agentic_loop{max_iter=10}: mini_agent_wasm::llm::openai: Parsed tool arguments for 'calculator' parsed_arguments={
+  "a": 42,
+  "b": 5742,
+  "operation": "add"
+}
+2026-03-30T09:41:55.825250Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::llm::openai: Parsing tool call [5]: calculator (id=call_4ee872b1f040492e9d5af418) index=5 id=call_4ee872b1f040492e9d5af418 function_name=calculator raw_arguments={"a": 5784, "b": 352, "operation": "add"}
+2026-03-30T09:41:55.825321Z TRACE            main run_agentic_loop{max_iter=10}: mini_agent_wasm::llm::openai: Parsed tool arguments for 'calculator' parsed_arguments={
+  "a": 5784,
+  "b": 352,
+  "operation": "add"
+}
+2026-03-30T09:41:55.825371Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: 📥 LLM responded in 2232ms (finish_reason=ToolUse) elapsed_ms=2232 finish_reason=ToolUse
+2026-03-30T09:41:55.825400Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: 🔧 LLM returned TOOL CALLS (6 tool(s)) tool_call_count=6 has_content=false
+2026-03-30T09:41:55.825433Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: Tool call [0]: calculator (id=call_ec9a266e95d84676993188ac) index=0 tool_name=calculator tool_call_id=call_ec9a266e95d84676993188ac arguments={
+  "a": 42,
+  "b": 5742,
+  "operation": "add"
+}
+2026-03-30T09:41:55.825477Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: Tool call [1]: calculator (id=call_d5bae0fdaffe4f2e86b48ef8) index=1 tool_name=calculator tool_call_id=call_d5bae0fdaffe4f2e86b48ef8 arguments={
+  "a": 5784,
+  "b": 352,
+  "operation": "add"
+}
+2026-03-30T09:41:55.825548Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: Tool call [2]: calculator (id=call_f19f56c397604f3abac4926a) index=2 tool_name=calculator tool_call_id=call_f19f56c397604f3abac4926a arguments={
+  "a": 42,
+  "b": 5742,
+  "operation": "add"
+}
+2026-03-30T09:41:55.825581Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: Tool call [3]: calculator (id=call_9825c9a1cd54497fae92b91c) index=3 tool_name=calculator tool_call_id=call_9825c9a1cd54497fae92b91c arguments={
+  "a": 5784,
+  "b": 352,
+  "operation": "add"
+}
+2026-03-30T09:41:55.825609Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: Tool call [4]: calculator (id=call_f5f56ba93e0e4198a26ef770) index=4 tool_name=calculator tool_call_id=call_f5f56ba93e0e4198a26ef770 arguments={
+  "a": 42,
+  "b": 5742,
+  "operation": "add"
+}
+2026-03-30T09:41:55.825635Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: Tool call [5]: calculator (id=call_4ee872b1f040492e9d5af418) index=5 tool_name=calculator tool_call_id=call_4ee872b1f040492e9d5af418 arguments={
+  "a": 5784,
+  "b": 352,
+  "operation": "add"
+}
+  🔧 LLM wants to call 6 tool(s)
+2026-03-30T09:41:55.825665Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: 📝 Adding assistant message with tool calls to conversation context
+2026-03-30T09:41:55.825721Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: Context now has 7 messages (after adding assistant tool call message) message_count=7
+2026-03-30T09:41:55.825743Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: ⚙️  Executing tool [1/6]: calculator index=0 tool=calculator
+2026-03-30T09:41:55.825766Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: Tool execution input tool_name=calculator tool_call_id=call_ec9a266e95d84676993188ac arguments={
+  "a": 42,
+  "b": 5742,
+  "operation": "add"
+}
+2026-03-30T09:41:55.825787Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: 🔍 Looking up tool in registry tool=calculator
+2026-03-30T09:41:55.825816Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: Tool found, preparing execution tool=calculator params={
+  "a": 42,
+  "b": 5742,
+  "operation": "add"
+}
+  ⚙️  Executing tool: calculator with params: {"a":42,"b":5742,"operation":"add"}
+2026-03-30T09:41:55.825848Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: ⏱️  Executing tool with 30s timeout tool=calculator timeout_secs=30
+2026-03-30T09:41:55.825901Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: 🔧 WasmTool::execute() — dispatching to WASM sandbox tool=calculator params={"a":42,"b":5742,"operation":"add"}
+2026-03-30T09:41:55.826048Z  INFO tokio-rt-worker mini_agent_wasm::tools: 🏖️  Executing tool in WASM sandbox tool=calculator params={"a":42,"b":5742,"operation":"add"} fuel_limit=1000000
+2026-03-30T09:41:55.827355Z DEBUG tokio-rt-worker mini_agent_wasm::tools: Creating fresh WASM store (complete isolation)
+2026-03-30T09:41:55.827899Z DEBUG tokio-rt-worker mini_agent_wasm::tools: Instantiating WASM guest in sandbox...
+2026-03-30T09:41:55.828688Z  INFO tokio-rt-worker mini_agent_wasm::tools: 📤 Calling WASM guest execute() function
+2026-03-30T09:41:55.828878Z  INFO tokio-rt-worker mini_agent_wasm::tools: 📋 [WASM LOG] [INFO] Calculating: 42 add 5742 wasm_log_level=INFO wasm_message=Calculating: 42 add 5742
+    📋 [WASM LOG] [INFO] Calculating: 42 add 5742
+2026-03-30T09:41:55.828925Z TRACE tokio-rt-worker mini_agent_wasm::tools: WASM guest called now_millis() millis=1774863715828
+2026-03-30T09:41:55.828953Z  INFO tokio-rt-worker mini_agent_wasm::tools: 📋 [WASM LOG] [INFO] Result: 5784 (at timestamp 1774863715828) wasm_log_level=INFO wasm_message=Result: 5784 (at timestamp 1774863715828)
+    📋 [WASM LOG] [INFO] Result: 5784 (at timestamp 1774863715828)
+2026-03-30T09:41:55.829018Z  INFO tokio-rt-worker mini_agent_wasm::tools: ⛽ Fuel consumed: 16217 / 1000000 units fuel_consumed=16217 fuel_remaining=983783 fuel_limit=1000000
+    ⛽ Fuel consumed: 16217 / 1000000 units
+2026-03-30T09:41:55.829041Z DEBUG tokio-rt-worker mini_agent_wasm::tools: WASM guest produced 2 log message(s) log_count=2
+2026-03-30T09:41:55.829054Z TRACE tokio-rt-worker mini_agent_wasm::tools: Guest log: [INFO] Calculating: 42 add 5742 wasm_log_level=INFO wasm_log_msg=Calculating: 42 add 5742
+2026-03-30T09:41:55.829068Z TRACE tokio-rt-worker mini_agent_wasm::tools: Guest log: [INFO] Result: 5784 (at timestamp 1774863715828) wasm_log_level=INFO wasm_log_msg=Result: 5784 (at timestamp 1774863715828)
+2026-03-30T09:41:55.829084Z  INFO tokio-rt-worker mini_agent_wasm::tools: ✅ WASM tool execution succeeded (78 chars output) output_len=78
+2026-03-30T09:41:55.829097Z DEBUG tokio-rt-worker mini_agent_wasm::tools: Full WASM tool output output={"expression":"42 + 5742 = 5784","result":5784.0,"timestamp_ms":1774863715828}
+2026-03-30T09:41:55.829536Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: WASM sandbox execution completed in 3ms elapsed_ms=3
+2026-03-30T09:41:55.829637Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: ✅ Tool execution succeeded in 3ms tool=calculator elapsed_ms=3
+2026-03-30T09:41:55.829729Z TRACE            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: Raw tool output tool=calculator raw_output={
+  "expression": "42 + 5742 = 5784",
+  "result": 5784.0,
+  "timestamp_ms": 1774863715828
+}
+2026-03-30T09:41:55.829764Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: Serialized tool output (91 chars) tool=calculator serialized_len=91 serialized={
+  "expression": "42 + 5742 = 5784",
+  "result": 5784.0,
+  "timestamp_ms": 1774863715828
+}
+2026-03-30T09:41:55.829795Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: Wrapping tool output in <tool_output> tags (118 chars) tool=calculator tool_call_id=call_ec9a266e95d84676993188ac content_len=118
+2026-03-30T09:41:55.829822Z TRACE            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: Full wrapped tool result tool=calculator wrapped_content=<tool_output>{
+  "expression": "42 + 5742 = 5784",
+  "result": 5784.0,
+  "timestamp_ms": 1774863715828
+}</tool_output>
+2026-03-30T09:41:55.829845Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: 📝 Creating tool result ChatMessage (role=Tool) tool=calculator tool_call_id=call_ec9a266e95d84676993188ac is_error=false
+2026-03-30T09:41:55.829874Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: ✅ Tool 'calculator' succeeded in 4ms (91 chars output) tool=calculator elapsed_ms=4 output_len=91
+2026-03-30T09:41:55.829903Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: Full tool output tool=calculator output={
+  "expression": "42 + 5742 = 5784",
+  "result": 5784.0,
+  "timestamp_ms": 1774863715828
+}
+  ✅ Tool 'calculator' succeeded: {
+  "expression": "42 + 5742 = 5784",
+  "result": 5784.0,
+  "timestamp_ms": 1774[...]
+2026-03-30T09:41:55.829935Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: 📝 Adding tool result for 'calculator' (call_id=call_ec9a266e95d84676993188ac) to conversation context
+2026-03-30T09:41:55.829961Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: Context now has 8 messages (after adding tool result) message_count=8
+2026-03-30T09:41:55.829985Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: ⚙️  Executing tool [2/6]: calculator index=1 tool=calculator
+2026-03-30T09:41:55.830016Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: Tool execution input tool_name=calculator tool_call_id=call_d5bae0fdaffe4f2e86b48ef8 arguments={
+  "a": 5784,
+  "b": 352,
+  "operation": "add"
+}
+2026-03-30T09:41:55.830042Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: 🔍 Looking up tool in registry tool=calculator
+2026-03-30T09:41:55.830071Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: Tool found, preparing execution tool=calculator params={
+  "a": 5784,
+  "b": 352,
+  "operation": "add"
+}
+  ⚙️  Executing tool: calculator with params: {"a":5784,"b":352,"operation":"add"}
+2026-03-30T09:41:55.830108Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: ⏱️  Executing tool with 30s timeout tool=calculator timeout_secs=30
+2026-03-30T09:41:55.830144Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: 🔧 WasmTool::execute() — dispatching to WASM sandbox tool=calculator params={"a":5784,"b":352,"operation":"add"}
+2026-03-30T09:41:55.830198Z  INFO tokio-rt-worker mini_agent_wasm::tools: 🏖️  Executing tool in WASM sandbox tool=calculator params={"a":5784,"b":352,"operation":"add"} fuel_limit=1000000
+2026-03-30T09:41:55.831309Z DEBUG tokio-rt-worker mini_agent_wasm::tools: Creating fresh WASM store (complete isolation)
+2026-03-30T09:41:55.831523Z DEBUG tokio-rt-worker mini_agent_wasm::tools: Instantiating WASM guest in sandbox...
+2026-03-30T09:41:55.832196Z  INFO tokio-rt-worker mini_agent_wasm::tools: 📤 Calling WASM guest execute() function
+2026-03-30T09:41:55.832364Z  INFO tokio-rt-worker mini_agent_wasm::tools: 📋 [WASM LOG] [INFO] Calculating: 5784 add 352 wasm_log_level=INFO wasm_message=Calculating: 5784 add 352
+    📋 [WASM LOG] [INFO] Calculating: 5784 add 352
+2026-03-30T09:41:55.832440Z TRACE tokio-rt-worker mini_agent_wasm::tools: WASM guest called now_millis() millis=1774863715832
+2026-03-30T09:41:55.832471Z  INFO tokio-rt-worker mini_agent_wasm::tools: 📋 [WASM LOG] [INFO] Result: 6136 (at timestamp 1774863715832) wasm_log_level=INFO wasm_message=Result: 6136 (at timestamp 1774863715832)
+    📋 [WASM LOG] [INFO] Result: 6136 (at timestamp 1774863715832)
+2026-03-30T09:41:55.832537Z  INFO tokio-rt-worker mini_agent_wasm::tools: ⛽ Fuel consumed: 16594 / 1000000 units fuel_consumed=16594 fuel_remaining=983406 fuel_limit=1000000
+    ⛽ Fuel consumed: 16594 / 1000000 units
+2026-03-30T09:41:55.832563Z DEBUG tokio-rt-worker mini_agent_wasm::tools: WASM guest produced 2 log message(s) log_count=2
+2026-03-30T09:41:55.832579Z TRACE tokio-rt-worker mini_agent_wasm::tools: Guest log: [INFO] Calculating: 5784 add 352 wasm_log_level=INFO wasm_log_msg=Calculating: 5784 add 352
+2026-03-30T09:41:55.832596Z TRACE tokio-rt-worker mini_agent_wasm::tools: Guest log: [INFO] Result: 6136 (at timestamp 1774863715832) wasm_log_level=INFO wasm_log_msg=Result: 6136 (at timestamp 1774863715832)
+2026-03-30T09:41:55.832615Z  INFO tokio-rt-worker mini_agent_wasm::tools: ✅ WASM tool execution succeeded (79 chars output) output_len=79
+2026-03-30T09:41:55.832631Z DEBUG tokio-rt-worker mini_agent_wasm::tools: Full WASM tool output output={"expression":"5784 + 352 = 6136","result":6136.0,"timestamp_ms":1774863715832}
+2026-03-30T09:41:55.832987Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: WASM sandbox execution completed in 2ms elapsed_ms=2
+2026-03-30T09:41:55.833097Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: ✅ Tool execution succeeded in 2ms tool=calculator elapsed_ms=2
+2026-03-30T09:41:55.833169Z TRACE            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: Raw tool output tool=calculator raw_output={
+  "expression": "5784 + 352 = 6136",
+  "result": 6136.0,
+  "timestamp_ms": 1774863715832
+}
+2026-03-30T09:41:55.833216Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: Serialized tool output (92 chars) tool=calculator serialized_len=92 serialized={
+  "expression": "5784 + 352 = 6136",
+  "result": 6136.0,
+  "timestamp_ms": 1774863715832
+}
+2026-03-30T09:41:55.833259Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: Wrapping tool output in <tool_output> tags (119 chars) tool=calculator tool_call_id=call_d5bae0fdaffe4f2e86b48ef8 content_len=119
+2026-03-30T09:41:55.833319Z TRACE            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: Full wrapped tool result tool=calculator wrapped_content=<tool_output>{
+  "expression": "5784 + 352 = 6136",
+  "result": 6136.0,
+  "timestamp_ms": 1774863715832
+}</tool_output>
+2026-03-30T09:41:55.833354Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: 📝 Creating tool result ChatMessage (role=Tool) tool=calculator tool_call_id=call_d5bae0fdaffe4f2e86b48ef8 is_error=false
+2026-03-30T09:41:55.833389Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: ✅ Tool 'calculator' succeeded in 3ms (92 chars output) tool=calculator elapsed_ms=3 output_len=92
+2026-03-30T09:41:55.833425Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: Full tool output tool=calculator output={
+  "expression": "5784 + 352 = 6136",
+  "result": 6136.0,
+  "timestamp_ms": 1774863715832
+}
+  ✅ Tool 'calculator' succeeded: {
+  "expression": "5784 + 352 = 6136",
+  "result": 6136.0,
+  "timestamp_ms": 177[...]
+2026-03-30T09:41:55.833461Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: 📝 Adding tool result for 'calculator' (call_id=call_d5bae0fdaffe4f2e86b48ef8) to conversation context
+2026-03-30T09:41:55.833490Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: Context now has 9 messages (after adding tool result) message_count=9
+2026-03-30T09:41:55.833536Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: ⚙️  Executing tool [3/6]: calculator index=2 tool=calculator
+2026-03-30T09:41:55.833567Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: Tool execution input tool_name=calculator tool_call_id=call_f19f56c397604f3abac4926a arguments={
+  "a": 42,
+  "b": 5742,
+  "operation": "add"
+}
+2026-03-30T09:41:55.833592Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: 🔍 Looking up tool in registry tool=calculator
+2026-03-30T09:41:55.833622Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: Tool found, preparing execution tool=calculator params={
+  "a": 42,
+  "b": 5742,
+  "operation": "add"
+}
+  ⚙️  Executing tool: calculator with params: {"a":42,"b":5742,"operation":"add"}
+2026-03-30T09:41:55.833657Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: ⏱️  Executing tool with 30s timeout tool=calculator timeout_secs=30
+2026-03-30T09:41:55.833690Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: 🔧 WasmTool::execute() — dispatching to WASM sandbox tool=calculator params={"a":42,"b":5742,"operation":"add"}
+2026-03-30T09:41:55.833741Z  INFO tokio-rt-worker mini_agent_wasm::tools: 🏖️  Executing tool in WASM sandbox tool=calculator params={"a":42,"b":5742,"operation":"add"} fuel_limit=1000000
+2026-03-30T09:41:55.834758Z DEBUG tokio-rt-worker mini_agent_wasm::tools: Creating fresh WASM store (complete isolation)
+2026-03-30T09:41:55.835011Z DEBUG tokio-rt-worker mini_agent_wasm::tools: Instantiating WASM guest in sandbox...
+2026-03-30T09:41:55.835684Z  INFO tokio-rt-worker mini_agent_wasm::tools: 📤 Calling WASM guest execute() function
+2026-03-30T09:41:55.835865Z  INFO tokio-rt-worker mini_agent_wasm::tools: 📋 [WASM LOG] [INFO] Calculating: 42 add 5742 wasm_log_level=INFO wasm_message=Calculating: 42 add 5742
+    📋 [WASM LOG] [INFO] Calculating: 42 add 5742
+2026-03-30T09:41:55.835911Z TRACE tokio-rt-worker mini_agent_wasm::tools: WASM guest called now_millis() millis=1774863715835
+2026-03-30T09:41:55.835936Z  INFO tokio-rt-worker mini_agent_wasm::tools: 📋 [WASM LOG] [INFO] Result: 5784 (at timestamp 1774863715835) wasm_log_level=INFO wasm_message=Result: 5784 (at timestamp 1774863715835)
+    📋 [WASM LOG] [INFO] Result: 5784 (at timestamp 1774863715835)
+2026-03-30T09:41:55.836002Z  INFO tokio-rt-worker mini_agent_wasm::tools: ⛽ Fuel consumed: 16217 / 1000000 units fuel_consumed=16217 fuel_remaining=983783 fuel_limit=1000000
+    ⛽ Fuel consumed: 16217 / 1000000 units
+2026-03-30T09:41:55.836022Z DEBUG tokio-rt-worker mini_agent_wasm::tools: WASM guest produced 2 log message(s) log_count=2
+2026-03-30T09:41:55.836035Z TRACE tokio-rt-worker mini_agent_wasm::tools: Guest log: [INFO] Calculating: 42 add 5742 wasm_log_level=INFO wasm_log_msg=Calculating: 42 add 5742
+2026-03-30T09:41:55.836047Z TRACE tokio-rt-worker mini_agent_wasm::tools: Guest log: [INFO] Result: 5784 (at timestamp 1774863715835) wasm_log_level=INFO wasm_log_msg=Result: 5784 (at timestamp 1774863715835)
+2026-03-30T09:41:55.836061Z  INFO tokio-rt-worker mini_agent_wasm::tools: ✅ WASM tool execution succeeded (78 chars output) output_len=78
+2026-03-30T09:41:55.836074Z DEBUG tokio-rt-worker mini_agent_wasm::tools: Full WASM tool output output={"expression":"42 + 5742 = 5784","result":5784.0,"timestamp_ms":1774863715835}
+2026-03-30T09:41:55.836408Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: WASM sandbox execution completed in 2ms elapsed_ms=2
+2026-03-30T09:41:55.836489Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: ✅ Tool execution succeeded in 2ms tool=calculator elapsed_ms=2
+2026-03-30T09:41:55.836532Z TRACE            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: Raw tool output tool=calculator raw_output={
+  "expression": "42 + 5742 = 5784",
+  "result": 5784.0,
+  "timestamp_ms": 1774863715835
+}
+2026-03-30T09:41:55.836596Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: Serialized tool output (91 chars) tool=calculator serialized_len=91 serialized={
+  "expression": "42 + 5742 = 5784",
+  "result": 5784.0,
+  "timestamp_ms": 1774863715835
+}
+2026-03-30T09:41:55.836621Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: Wrapping tool output in <tool_output> tags (118 chars) tool=calculator tool_call_id=call_f19f56c397604f3abac4926a content_len=118
+2026-03-30T09:41:55.836641Z TRACE            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: Full wrapped tool result tool=calculator wrapped_content=<tool_output>{
+  "expression": "42 + 5742 = 5784",
+  "result": 5784.0,
+  "timestamp_ms": 1774863715835
+}</tool_output>
+2026-03-30T09:41:55.836658Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: 📝 Creating tool result ChatMessage (role=Tool) tool=calculator tool_call_id=call_f19f56c397604f3abac4926a is_error=false
+2026-03-30T09:41:55.836678Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: ✅ Tool 'calculator' succeeded in 3ms (91 chars output) tool=calculator elapsed_ms=3 output_len=91
+2026-03-30T09:41:55.836700Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: Full tool output tool=calculator output={
+  "expression": "42 + 5742 = 5784",
+  "result": 5784.0,
+  "timestamp_ms": 1774863715835
+}
+  ✅ Tool 'calculator' succeeded: {
+  "expression": "42 + 5742 = 5784",
+  "result": 5784.0,
+  "timestamp_ms": 1774[...]
+2026-03-30T09:41:55.836724Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: 📝 Adding tool result for 'calculator' (call_id=call_f19f56c397604f3abac4926a) to conversation context
+2026-03-30T09:41:55.836744Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: Context now has 10 messages (after adding tool result) message_count=10
+2026-03-30T09:41:55.836762Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: ⚙️  Executing tool [4/6]: calculator index=3 tool=calculator
+2026-03-30T09:41:55.836786Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: Tool execution input tool_name=calculator tool_call_id=call_9825c9a1cd54497fae92b91c arguments={
+  "a": 5784,
+  "b": 352,
+  "operation": "add"
+}
+2026-03-30T09:41:55.836805Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: 🔍 Looking up tool in registry tool=calculator
+2026-03-30T09:41:55.836827Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: Tool found, preparing execution tool=calculator params={
+  "a": 5784,
+  "b": 352,
+  "operation": "add"
+}
+  ⚙️  Executing tool: calculator with params: {"a":5784,"b":352,"operation":"add"}
+2026-03-30T09:41:55.836854Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: ⏱️  Executing tool with 30s timeout tool=calculator timeout_secs=30
+2026-03-30T09:41:55.836881Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: 🔧 WasmTool::execute() — dispatching to WASM sandbox tool=calculator params={"a":5784,"b":352,"operation":"add"}
+2026-03-30T09:41:55.836922Z  INFO tokio-rt-worker mini_agent_wasm::tools: 🏖️  Executing tool in WASM sandbox tool=calculator params={"a":5784,"b":352,"operation":"add"} fuel_limit=1000000
+2026-03-30T09:41:55.837826Z DEBUG tokio-rt-worker mini_agent_wasm::tools: Creating fresh WASM store (complete isolation)
+2026-03-30T09:41:55.837994Z DEBUG tokio-rt-worker mini_agent_wasm::tools: Instantiating WASM guest in sandbox...
+2026-03-30T09:41:55.838455Z  INFO tokio-rt-worker mini_agent_wasm::tools: 📤 Calling WASM guest execute() function
+2026-03-30T09:41:55.838557Z  INFO tokio-rt-worker mini_agent_wasm::tools: 📋 [WASM LOG] [INFO] Calculating: 5784 add 352 wasm_log_level=INFO wasm_message=Calculating: 5784 add 352
+    📋 [WASM LOG] [INFO] Calculating: 5784 add 352
+2026-03-30T09:41:55.838591Z TRACE tokio-rt-worker mini_agent_wasm::tools: WASM guest called now_millis() millis=1774863715838
+2026-03-30T09:41:55.838639Z  INFO tokio-rt-worker mini_agent_wasm::tools: 📋 [WASM LOG] [INFO] Result: 6136 (at timestamp 1774863715838) wasm_log_level=INFO wasm_message=Result: 6136 (at timestamp 1774863715838)
+    📋 [WASM LOG] [INFO] Result: 6136 (at timestamp 1774863715838)
+2026-03-30T09:41:55.838688Z  INFO tokio-rt-worker mini_agent_wasm::tools: ⛽ Fuel consumed: 16594 / 1000000 units fuel_consumed=16594 fuel_remaining=983406 fuel_limit=1000000
+    ⛽ Fuel consumed: 16594 / 1000000 units
+2026-03-30T09:41:55.838709Z DEBUG tokio-rt-worker mini_agent_wasm::tools: WASM guest produced 2 log message(s) log_count=2
+2026-03-30T09:41:55.838721Z TRACE tokio-rt-worker mini_agent_wasm::tools: Guest log: [INFO] Calculating: 5784 add 352 wasm_log_level=INFO wasm_log_msg=Calculating: 5784 add 352
+2026-03-30T09:41:55.838733Z TRACE tokio-rt-worker mini_agent_wasm::tools: Guest log: [INFO] Result: 6136 (at timestamp 1774863715838) wasm_log_level=INFO wasm_log_msg=Result: 6136 (at timestamp 1774863715838)
+2026-03-30T09:41:55.838747Z  INFO tokio-rt-worker mini_agent_wasm::tools: ✅ WASM tool execution succeeded (79 chars output) output_len=79
+2026-03-30T09:41:55.838759Z DEBUG tokio-rt-worker mini_agent_wasm::tools: Full WASM tool output output={"expression":"5784 + 352 = 6136","result":6136.0,"timestamp_ms":1774863715838}
+2026-03-30T09:41:55.839037Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: WASM sandbox execution completed in 2ms elapsed_ms=2
+2026-03-30T09:41:55.839112Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: ✅ Tool execution succeeded in 2ms tool=calculator elapsed_ms=2
+2026-03-30T09:41:55.839152Z TRACE            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: Raw tool output tool=calculator raw_output={
+  "expression": "5784 + 352 = 6136",
+  "result": 6136.0,
+  "timestamp_ms": 1774863715838
+}
+2026-03-30T09:41:55.839179Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: Serialized tool output (92 chars) tool=calculator serialized_len=92 serialized={
+  "expression": "5784 + 352 = 6136",
+  "result": 6136.0,
+  "timestamp_ms": 1774863715838
+}
+2026-03-30T09:41:55.839203Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: Wrapping tool output in <tool_output> tags (119 chars) tool=calculator tool_call_id=call_9825c9a1cd54497fae92b91c content_len=119
+2026-03-30T09:41:55.839224Z TRACE            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: Full wrapped tool result tool=calculator wrapped_content=<tool_output>{
+  "expression": "5784 + 352 = 6136",
+  "result": 6136.0,
+  "timestamp_ms": 1774863715838
+}</tool_output>
+2026-03-30T09:41:55.839242Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: 📝 Creating tool result ChatMessage (role=Tool) tool=calculator tool_call_id=call_9825c9a1cd54497fae92b91c is_error=false
+2026-03-30T09:41:55.839263Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: ✅ Tool 'calculator' succeeded in 2ms (92 chars output) tool=calculator elapsed_ms=2 output_len=92
+2026-03-30T09:41:55.839283Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: Full tool output tool=calculator output={
+  "expression": "5784 + 352 = 6136",
+  "result": 6136.0,
+  "timestamp_ms": 1774863715838
+}
+  ✅ Tool 'calculator' succeeded: {
+  "expression": "5784 + 352 = 6136",
+  "result": 6136.0,
+  "timestamp_ms": 177[...]
+2026-03-30T09:41:55.839307Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: 📝 Adding tool result for 'calculator' (call_id=call_9825c9a1cd54497fae92b91c) to conversation context
+2026-03-30T09:41:55.839327Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: Context now has 11 messages (after adding tool result) message_count=11
+2026-03-30T09:41:55.839345Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: ⚙️  Executing tool [5/6]: calculator index=4 tool=calculator
+2026-03-30T09:41:55.839371Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: Tool execution input tool_name=calculator tool_call_id=call_f5f56ba93e0e4198a26ef770 arguments={
+  "a": 42,
+  "b": 5742,
+  "operation": "add"
+}
+2026-03-30T09:41:55.839391Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: 🔍 Looking up tool in registry tool=calculator
+2026-03-30T09:41:55.839414Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: Tool found, preparing execution tool=calculator params={
+  "a": 42,
+  "b": 5742,
+  "operation": "add"
+}
+  ⚙️  Executing tool: calculator with params: {"a":42,"b":5742,"operation":"add"}
+2026-03-30T09:41:55.839441Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: ⏱️  Executing tool with 30s timeout tool=calculator timeout_secs=30
+2026-03-30T09:41:55.839468Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: 🔧 WasmTool::execute() — dispatching to WASM sandbox tool=calculator params={"a":42,"b":5742,"operation":"add"}
+2026-03-30T09:41:55.839511Z  INFO tokio-rt-worker mini_agent_wasm::tools: 🏖️  Executing tool in WASM sandbox tool=calculator params={"a":42,"b":5742,"operation":"add"} fuel_limit=1000000
+2026-03-30T09:41:55.840593Z DEBUG tokio-rt-worker mini_agent_wasm::tools: Creating fresh WASM store (complete isolation)
+2026-03-30T09:41:55.840825Z DEBUG tokio-rt-worker mini_agent_wasm::tools: Instantiating WASM guest in sandbox...
+2026-03-30T09:41:55.841344Z  INFO tokio-rt-worker mini_agent_wasm::tools: 📤 Calling WASM guest execute() function
+2026-03-30T09:41:55.841434Z  INFO tokio-rt-worker mini_agent_wasm::tools: 📋 [WASM LOG] [INFO] Calculating: 42 add 5742 wasm_log_level=INFO wasm_message=Calculating: 42 add 5742
+    📋 [WASM LOG] [INFO] Calculating: 42 add 5742
+2026-03-30T09:41:55.841475Z TRACE tokio-rt-worker mini_agent_wasm::tools: WASM guest called now_millis() millis=1774863715841
+2026-03-30T09:41:55.841504Z  INFO tokio-rt-worker mini_agent_wasm::tools: 📋 [WASM LOG] [INFO] Result: 5784 (at timestamp 1774863715841) wasm_log_level=INFO wasm_message=Result: 5784 (at timestamp 1774863715841)
+    📋 [WASM LOG] [INFO] Result: 5784 (at timestamp 1774863715841)
+2026-03-30T09:41:55.841555Z  INFO tokio-rt-worker mini_agent_wasm::tools: ⛽ Fuel consumed: 16217 / 1000000 units fuel_consumed=16217 fuel_remaining=983783 fuel_limit=1000000
+    ⛽ Fuel consumed: 16217 / 1000000 units
+2026-03-30T09:41:55.841576Z DEBUG tokio-rt-worker mini_agent_wasm::tools: WASM guest produced 2 log message(s) log_count=2
+2026-03-30T09:41:55.841589Z TRACE tokio-rt-worker mini_agent_wasm::tools: Guest log: [INFO] Calculating: 42 add 5742 wasm_log_level=INFO wasm_log_msg=Calculating: 42 add 5742
+2026-03-30T09:41:55.841602Z TRACE tokio-rt-worker mini_agent_wasm::tools: Guest log: [INFO] Result: 5784 (at timestamp 1774863715841) wasm_log_level=INFO wasm_log_msg=Result: 5784 (at timestamp 1774863715841)
+2026-03-30T09:41:55.841616Z  INFO tokio-rt-worker mini_agent_wasm::tools: ✅ WASM tool execution succeeded (78 chars output) output_len=78
+2026-03-30T09:41:55.841628Z DEBUG tokio-rt-worker mini_agent_wasm::tools: Full WASM tool output output={"expression":"42 + 5742 = 5784","result":5784.0,"timestamp_ms":1774863715841}
+2026-03-30T09:41:55.841888Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: WASM sandbox execution completed in 2ms elapsed_ms=2
+2026-03-30T09:41:55.841969Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: ✅ Tool execution succeeded in 2ms tool=calculator elapsed_ms=2
+2026-03-30T09:41:55.842016Z TRACE            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: Raw tool output tool=calculator raw_output={
+  "expression": "42 + 5742 = 5784",
+  "result": 5784.0,
+  "timestamp_ms": 1774863715841
+}
+2026-03-30T09:41:55.842049Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: Serialized tool output (91 chars) tool=calculator serialized_len=91 serialized={
+  "expression": "42 + 5742 = 5784",
+  "result": 5784.0,
+  "timestamp_ms": 1774863715841
+}
+2026-03-30T09:41:55.842075Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: Wrapping tool output in <tool_output> tags (118 chars) tool=calculator tool_call_id=call_f5f56ba93e0e4198a26ef770 content_len=118
+2026-03-30T09:41:55.842098Z TRACE            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: Full wrapped tool result tool=calculator wrapped_content=<tool_output>{
+  "expression": "42 + 5742 = 5784",
+  "result": 5784.0,
+  "timestamp_ms": 1774863715841
+}</tool_output>
+2026-03-30T09:41:55.842115Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: 📝 Creating tool result ChatMessage (role=Tool) tool=calculator tool_call_id=call_f5f56ba93e0e4198a26ef770 is_error=false
+2026-03-30T09:41:55.842136Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: ✅ Tool 'calculator' succeeded in 2ms (91 chars output) tool=calculator elapsed_ms=2 output_len=91
+2026-03-30T09:41:55.842157Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: Full tool output tool=calculator output={
+  "expression": "42 + 5742 = 5784",
+  "result": 5784.0,
+  "timestamp_ms": 1774863715841
+}
+  ✅ Tool 'calculator' succeeded: {
+  "expression": "42 + 5742 = 5784",
+  "result": 5784.0,
+  "timestamp_ms": 1774[...]
+2026-03-30T09:41:55.842186Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: 📝 Adding tool result for 'calculator' (call_id=call_f5f56ba93e0e4198a26ef770) to conversation context
+2026-03-30T09:41:55.842205Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: Context now has 12 messages (after adding tool result) message_count=12
+2026-03-30T09:41:55.842223Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: ⚙️  Executing tool [6/6]: calculator index=5 tool=calculator
+2026-03-30T09:41:55.842252Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: Tool execution input tool_name=calculator tool_call_id=call_4ee872b1f040492e9d5af418 arguments={
+  "a": 5784,
+  "b": 352,
+  "operation": "add"
+}
+2026-03-30T09:41:55.842276Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: 🔍 Looking up tool in registry tool=calculator
+2026-03-30T09:41:55.842298Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: Tool found, preparing execution tool=calculator params={
+  "a": 5784,
+  "b": 352,
+  "operation": "add"
+}
+  ⚙️  Executing tool: calculator with params: {"a":5784,"b":352,"operation":"add"}
+2026-03-30T09:41:55.842330Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: ⏱️  Executing tool with 30s timeout tool=calculator timeout_secs=30
+2026-03-30T09:41:55.842358Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: 🔧 WasmTool::execute() — dispatching to WASM sandbox tool=calculator params={"a":5784,"b":352,"operation":"add"}
+2026-03-30T09:41:55.842417Z  INFO tokio-rt-worker mini_agent_wasm::tools: 🏖️  Executing tool in WASM sandbox tool=calculator params={"a":5784,"b":352,"operation":"add"} fuel_limit=1000000
+2026-03-30T09:41:55.843425Z DEBUG tokio-rt-worker mini_agent_wasm::tools: Creating fresh WASM store (complete isolation)
+2026-03-30T09:41:55.843624Z DEBUG tokio-rt-worker mini_agent_wasm::tools: Instantiating WASM guest in sandbox...
+2026-03-30T09:41:55.844065Z  INFO tokio-rt-worker mini_agent_wasm::tools: 📤 Calling WASM guest execute() function
+2026-03-30T09:41:55.844140Z  INFO tokio-rt-worker mini_agent_wasm::tools: 📋 [WASM LOG] [INFO] Calculating: 5784 add 352 wasm_log_level=INFO wasm_message=Calculating: 5784 add 352
+    📋 [WASM LOG] [INFO] Calculating: 5784 add 352
+2026-03-30T09:41:55.844177Z TRACE tokio-rt-worker mini_agent_wasm::tools: WASM guest called now_millis() millis=1774863715844
+2026-03-30T09:41:55.844204Z  INFO tokio-rt-worker mini_agent_wasm::tools: 📋 [WASM LOG] [INFO] Result: 6136 (at timestamp 1774863715844) wasm_log_level=INFO wasm_message=Result: 6136 (at timestamp 1774863715844)
+    📋 [WASM LOG] [INFO] Result: 6136 (at timestamp 1774863715844)
+2026-03-30T09:41:55.844259Z  INFO tokio-rt-worker mini_agent_wasm::tools: ⛽ Fuel consumed: 16594 / 1000000 units fuel_consumed=16594 fuel_remaining=983406 fuel_limit=1000000
+    ⛽ Fuel consumed: 16594 / 1000000 units
+2026-03-30T09:41:55.844280Z DEBUG tokio-rt-worker mini_agent_wasm::tools: WASM guest produced 2 log message(s) log_count=2
+2026-03-30T09:41:55.844292Z TRACE tokio-rt-worker mini_agent_wasm::tools: Guest log: [INFO] Calculating: 5784 add 352 wasm_log_level=INFO wasm_log_msg=Calculating: 5784 add 352
+2026-03-30T09:41:55.844306Z TRACE tokio-rt-worker mini_agent_wasm::tools: Guest log: [INFO] Result: 6136 (at timestamp 1774863715844) wasm_log_level=INFO wasm_log_msg=Result: 6136 (at timestamp 1774863715844)
+2026-03-30T09:41:55.844319Z  INFO tokio-rt-worker mini_agent_wasm::tools: ✅ WASM tool execution succeeded (79 chars output) output_len=79
+2026-03-30T09:41:55.844331Z DEBUG tokio-rt-worker mini_agent_wasm::tools: Full WASM tool output output={"expression":"5784 + 352 = 6136","result":6136.0,"timestamp_ms":1774863715844}
+2026-03-30T09:41:55.844564Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: WASM sandbox execution completed in 2ms elapsed_ms=2
+2026-03-30T09:41:55.844634Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: ✅ Tool execution succeeded in 2ms tool=calculator elapsed_ms=2
+2026-03-30T09:41:55.844678Z TRACE            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: Raw tool output tool=calculator raw_output={
+  "expression": "5784 + 352 = 6136",
+  "result": 6136.0,
+  "timestamp_ms": 1774863715844
+}
+2026-03-30T09:41:55.844710Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: Serialized tool output (92 chars) tool=calculator serialized_len=92 serialized={
+  "expression": "5784 + 352 = 6136",
+  "result": 6136.0,
+  "timestamp_ms": 1774863715844
+}
+2026-03-30T09:41:55.844737Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: Wrapping tool output in <tool_output> tags (119 chars) tool=calculator tool_call_id=call_4ee872b1f040492e9d5af418 content_len=119
+2026-03-30T09:41:55.844758Z TRACE            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: Full wrapped tool result tool=calculator wrapped_content=<tool_output>{
+  "expression": "5784 + 352 = 6136",
+  "result": 6136.0,
+  "timestamp_ms": 1774863715844
+}</tool_output>
+2026-03-30T09:41:55.844776Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::tools: 📝 Creating tool result ChatMessage (role=Tool) tool=calculator tool_call_id=call_4ee872b1f040492e9d5af418 is_error=false
+2026-03-30T09:41:55.844796Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: ✅ Tool 'calculator' succeeded in 2ms (92 chars output) tool=calculator elapsed_ms=2 output_len=92
+2026-03-30T09:41:55.844817Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: Full tool output tool=calculator output={
+  "expression": "5784 + 352 = 6136",
+  "result": 6136.0,
+  "timestamp_ms": 1774863715844
+}
+  ✅ Tool 'calculator' succeeded: {
+  "expression": "5784 + 352 = 6136",
+  "result": 6136.0,
+  "timestamp_ms": 177[...]
+2026-03-30T09:41:55.844844Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: 📝 Adding tool result for 'calculator' (call_id=call_4ee872b1f040492e9d5af418) to conversation context
+2026-03-30T09:41:55.844863Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: Context now has 13 messages (after adding tool result) message_count=13
+2026-03-30T09:41:55.844880Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: 🔄 All tools executed. Looping back to LLM with updated context (13 messages) message_count=13
+2026-03-30T09:41:55.844905Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: ━━━ Iteration 3/10 ━━━ iteration=3 max=10 message_count=13
+
+--- Iteration 3/10 ---
+2026-03-30T09:41:55.844932Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: 📤 Step 1: Calling LLM...
+2026-03-30T09:41:55.844948Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: Sending 13 messages and 1 tool definitions to LLM message_count=13 tool_count=1
+2026-03-30T09:41:55.844981Z TRACE            main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: Message flow before LLM call messages_summary=[0]SYS → [1]USR → [2]AST → [3]TOL → [4]TOL → [5]TOL → [6]AST → [7]TOL → [8]TOL → [9]TOL → [10]TOL → [11]TOL → [12]TOL
+2026-03-30T09:41:55.845003Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::llm::openai: 📤 Preparing LLM API request url=http://api.haihub.cn/v1/chat/completions model=DeepSeek-V3-0324 message_count=13 tool_count=1
+2026-03-30T09:41:55.845494Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::llm::openai: 📤 Full OpenAI API request body request_body={
+  "model": "DeepSeek-V3-0324",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a helpful assistant powered by the DeepSeek-V3-0324 model. You have access to a calculator tool. When the user asks a math question, use the calculator tool to compute the answer. For non-math questions, respond directly. When asked about your identity, truthfully state that you are based on DeepSeek-V3-0324."
+    },
+    {
+      "role": "user",
+      "content": "What is 42 + 58*99 +(88*12/3)?"
+    },
+    {
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_a2692f5195fe4959b826feea",
+          "type": "function",
+          "function": {
+            "name": "calculator",
+            "arguments": "{\"a\":58,\"b\":99,\"operation\":\"mul\"}"
+          }
+        },
+        {
+          "id": "call_71b4f044098742e2b42d3c14",
+          "type": "function",
+          "function": {
+            "name": "calculator",
+            "arguments": "{\"a\":88,\"b\":12,\"operation\":\"mul\"}"
+          }
+        },
+        {
+          "id": "call_17524402ed354144b7117b95",
+          "type": "function",
+          "function": {
+            "name": "calculator",
+            "arguments": "{\"a\":1056,\"b\":3,\"operation\":\"div\"}"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "content": "<tool_output>{\n  \"expression\": \"58 × 99 = 5742\",\n  \"result\": 5742.0,\n  \"timestamp_ms\": 1774863713587\n}</tool_output>",
+      "tool_call_id": "call_a2692f5195fe4959b826feea",
+      "name": "calculator"
+    },
+    {
+      "role": "tool",
+      "content": "<tool_output>{\n  \"expression\": \"88 × 12 = 1056\",\n  \"result\": 1056.0,\n  \"timestamp_ms\": 1774863713590\n}</tool_output>",
+      "tool_call_id": "call_71b4f044098742e2b42d3c14",
+      "name": "calculator"
+    },
+    {
+      "role": "tool",
+      "content": "<tool_output>{\n  \"expression\": \"1056 ÷ 3 = 352\",\n  \"result\": 352.0,\n  \"timestamp_ms\": 1774863713592\n}</tool_output>",
+      "tool_call_id": "call_17524402ed354144b7117b95",
+      "name": "calculator"
+    },
+    {
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_ec9a266e95d84676993188ac",
+          "type": "function",
+          "function": {
+            "name": "calculator",
+            "arguments": "{\"a\":42,\"b\":5742,\"operation\":\"add\"}"
+          }
+        },
+        {
+          "id": "call_d5bae0fdaffe4f2e86b48ef8",
+          "type": "function",
+          "function": {
+            "name": "calculator",
+            "arguments": "{\"a\":5784,\"b\":352,\"operation\":\"add\"}"
+          }
+        },
+        {
+          "id": "call_f19f56c397604f3abac4926a",
+          "type": "function",
+          "function": {
+            "name": "calculator",
+            "arguments": "{\"a\":42,\"b\":5742,\"operation\":\"add\"}"
+          }
+        },
+        {
+          "id": "call_9825c9a1cd54497fae92b91c",
+          "type": "function",
+          "function": {
+            "name": "calculator",
+            "arguments": "{\"a\":5784,\"b\":352,\"operation\":\"add\"}"
+          }
+        },
+        {
+          "id": "call_f5f56ba93e0e4198a26ef770",
+          "type": "function",
+          "function": {
+            "name": "calculator",
+            "arguments": "{\"a\":42,\"b\":5742,\"operation\":\"add\"}"
+          }
+        },
+        {
+          "id": "call_4ee872b1f040492e9d5af418",
+          "type": "function",
+          "function": {
+            "name": "calculator",
+            "arguments": "{\"a\":5784,\"b\":352,\"operation\":\"add\"}"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "content": "<tool_output>{\n  \"expression\": \"42 + 5742 = 5784\",\n  \"result\": 5784.0,\n  \"timestamp_ms\": 1774863715828\n}</tool_output>",
+      "tool_call_id": "call_ec9a266e95d84676993188ac",
+      "name": "calculator"
+    },
+    {
+      "role": "tool",
+      "content": "<tool_output>{\n  \"expression\": \"5784 + 352 = 6136\",\n  \"result\": 6136.0,\n  \"timestamp_ms\": 1774863715832\n}</tool_output>",
+      "tool_call_id": "call_d5bae0fdaffe4f2e86b48ef8",
+      "name": "calculator"
+    },
+    {
+      "role": "tool",
+      "content": "<tool_output>{\n  \"expression\": \"42 + 5742 = 5784\",\n  \"result\": 5784.0,\n  \"timestamp_ms\": 1774863715835\n}</tool_output>",
+      "tool_call_id": "call_f19f56c397604f3abac4926a",
+      "name": "calculator"
+    },
+    {
+      "role": "tool",
+      "content": "<tool_output>{\n  \"expression\": \"5784 + 352 = 6136\",\n  \"result\": 6136.0,\n  \"timestamp_ms\": 1774863715838\n}</tool_output>",
+      "tool_call_id": "call_9825c9a1cd54497fae92b91c",
+      "name": "calculator"
+    },
+    {
+      "role": "tool",
+      "content": "<tool_output>{\n  \"expression\": \"42 + 5742 = 5784\",\n  \"result\": 5784.0,\n  \"timestamp_ms\": 1774863715841\n}</tool_output>",
+      "tool_call_id": "call_f5f56ba93e0e4198a26ef770",
+      "name": "calculator"
+    },
+    {
+      "role": "tool",
+      "content": "<tool_output>{\n  \"expression\": \"5784 + 352 = 6136\",\n  \"result\": 6136.0,\n  \"timestamp_ms\": 1774863715844\n}</tool_output>",
+      "tool_call_id": "call_4ee872b1f040492e9d5af418",
+      "name": "calculator"
+    }
+  ],
+  "tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "calculator",
+        "description": "A sandboxed calculator tool. Performs basic math operations (add, sub, mul, div) inside a WASM sandbox.",
+        "parameters": {
+          "properties": {
+            "a": {
+              "description": "First operand",
+              "type": "number"
+            },
+            "b": {
+              "description": "Second operand",
+              "type": "number"
+            },
+            "operation": {
+              "description": "Math operation: add, sub, mul, div",
+              "enum": [
+                "add",
+                "sub",
+                "mul",
+                "div"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "operation",
+            "a",
+            "b"
+          ],
+          "type": "object"
+        }
+      }
+    }
+  ],
+  "tool_choice": "auto"
+}
+2026-03-30T09:41:55.845536Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::llm::openai: Request summary: 13 messages [system → user → assistant → tool → tool → tool → assistant → tool → tool → tool → tool → tool → tool], 1 tools model=DeepSeek-V3-0324 message_count=13 tool_count=1 tool_choice=Some("auto") messages_roles=system → user → assistant → tool → tool → tool → assistant → tool → tool → tool → tool → tool → tool
+2026-03-30T09:41:55.845566Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::llm::openai: 🌐 Sending HTTP POST to http://api.haihub.cn/v1/chat/completions...
+2026-03-30T09:41:56.947018Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::llm::openai: 📥 HTTP response received: 200 OK in 1101ms status=200 OK elapsed_ms=1101
+2026-03-30T09:41:56.947704Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::llm::openai: 📥 Raw API response body (710 bytes) response_body={"id":"87bd1bbbbca34e848dd970b13e7bdf6c","object":"chat.completion","created":1774863717,"model":"DeepSeek-V3-0324","choices":[{"index":0,"message":{"role":"assistant","content":"The result of the expression \\(42 + 58 \\times 99 + (88 \\times 12 \\div 3)\\) is **6136**. Here's the breakdown:\n\n1. \\(58 \\times 99 = 5742\\)\n2. \\(88 \\times 12 = 1056\\)\n3. \\(1056 \\div 3 = 352\\)\n4. \\(42 + 5742 = 5784\\)\n5. \\(5784 + 352 = 6136\\)","reasoning_content":null,"tool_calls":null},"logprobs":null,"finish_reason":"stop","matched_stop":1}],"usage":{"prompt_tokens":1064,"total_tokens":1170,"completion_tokens":106,"prompt_tokens_details":null,"reasoning_tokens":0},"metadata":{"weight_version":"default"}} response_len=710
+2026-03-30T09:41:56.947917Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::llm::openai: Parsed response: 1 choice(s) choice_count=1
+2026-03-30T09:41:56.947962Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::llm::openai: Response choice: finish_reason=stop, has_content=true, has_tool_calls=false finish_reason=stop has_content=true has_tool_calls=false
+2026-03-30T09:41:56.948011Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::llm::openai: 💬 LLM returned text response (238 chars) text_len=238
+2026-03-30T09:41:56.948041Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::llm::openai: Full LLM text response text=The result of the expression \(42 + 58 \times 99 + (88 \times 12 \div 3)\) is **6136**. Here's the breakdown:
+
+1. \(58 \times 99 = 5742\)
+2. \(88 \times 12 = 1056\)
+3. \(1056 \div 3 = 352\)
+4. \(42 + 5742 = 5784\)
+5. \(5784 + 352 = 6136\)
+2026-03-30T09:41:56.948115Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: 📥 LLM responded in 1103ms (finish_reason=Stop) elapsed_ms=1103 finish_reason=Stop
+2026-03-30T09:41:56.952633Z  INFO            main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: 💬 LLM returned TEXT response (238 chars) text_len=238
+2026-03-30T09:41:56.952753Z DEBUG            main run_agentic_loop{max_iter=10}: mini_agent_wasm::agent: Full text response from LLM text=The result of the expression \(42 + 58 \times 99 + (88 \times 12 \div 3)\) is **6136**. Here's the breakdown:
+
+1. \(58 \times 99 = 5742\)
+2. \(88 \times 12 = 1056\)
+3. \(1056 \div 3 = 352\)
+4. \(42 + 5742 = 5784\)
+5. \(5784 + 352 = 6136\)
+  💬 LLM returned text: The result of the expression \(42 + 58 \times 99 + (88 \times 12 \div 3)\) is **6136**. Here's the b[...]
+2026-03-30T09:41:56.952879Z  INFO            main mini_agent_wasm: ✅ Agentic loop completed with text response elapsed_ms=5067 response_len=238
+2026-03-30T09:41:56.952973Z DEBUG            main mini_agent_wasm: Full agent response response=The result of the expression \(42 + 58 \times 99 + (88 \times 12 \div 3)\) is **6136**. Here's the breakdown:
+
+1. \(58 \times 99 = 5742\)
+2. \(88 \times 12 = 1056\)
+3. \(1056 \div 3 = 352\)
+4. \(42 + 5742 = 5784\)
+5. \(5784 + 352 = 6136\)
+2026-03-30T09:41:56.953102Z TRACE            main mini_agent_wasm: Final message context after agentic loop final_messages=
+  [0] SYSTEM | content: "You are a helpful assistant powered by the DeepSeek-V3-0324 model. You have access to a calculator tool. When the user asks a math question, use the calculator tool to compute the answer. For non-math questions, respond directly. When asked about your identity, truthfully state that you are based on DeepSeek-V3-0324."
+  [1] USER | content: "What is 42 + 58*99 +(88*12/3)?"
+  [2] ASSISTANT | content: "" | tool_calls: [ToolCall { id: "call_a2692f5195fe4959b826feea", name: "calculator", arguments: Object {"a": Number(58), "b": Number(99), "operation": String("mul")} }, ToolCall { id: "call_71b4f044098742e2b42d3c14", name: "calculator", arguments: Object {"a": Number(88), "b": Number(12), "operation": String("mul")} }, ToolCall { id: "call_17524402ed354144b7117b95", name: "calculator", arguments: Object {"a": Number(1056), "b": Number(3), "operation": String("div")} }]
+  [3] TOOL | content: "<tool_output>{
+  "expression": "58 × 99 = 5742",
+  "result": 5742.0,
+  "timestamp_ms": 1774863713587
+}</tool_output>" | tool_call_id: call_a2692f5195fe4959b826feea | name: calculator
+  [4] TOOL | content: "<tool_output>{
+  "expression": "88 × 12 = 1056",
+  "result": 1056.0,
+  "timestamp_ms": 1774863713590
+}</tool_output>" | tool_call_id: call_71b4f044098742e2b42d3c14 | name: calculator
+  [5] TOOL | content: "<tool_output>{
+  "expression": "1056 ÷ 3 = 352",
+  "result": 352.0,
+  "timestamp_ms": 1774863713592
+}</tool_output>" | tool_call_id: call_17524402ed354144b7117b95 | name: calculator
+  [6] ASSISTANT | content: "" | tool_calls: [ToolCall { id: "call_ec9a266e95d84676993188ac", name: "calculator", arguments: Object {"a": Number(42), "b": Number(5742), "operation": String("add")} }, ToolCall { id: "call_d5bae0fdaffe4f2e86b48ef8", name: "calculator", arguments: Object {"a": Number(5784), "b": Number(352), "operation": String("add")} }, ToolCall { id: "call_f19f56c397604f3abac4926a", name: "calculator", arguments: Object {"a": Number(42), "b": Number(5742), "operation": String("add")} }, ToolCall { id: "call_9825c9a1cd54497fae92b91c", name: "calculator", arguments: Object {"a": Number(5784), "b": Number(352), "operation": String("add")} }, ToolCall { id: "call_f5f56ba93e0e4198a26ef770", name: "calculator", arguments: Object {"a": Number(42), "b": Number(5742), "operation": String("add")} }, ToolCall { id: "call_4ee872b1f040492e9d5af418", name: "calculator", arguments: Object {"a": Number(5784), "b": Number(352), "operation": String("add")} }]
+  [7] TOOL | content: "<tool_output>{
+  "expression": "42 + 5742 = 5784",
+  "result": 5784.0,
+  "timestamp_ms": 1774863715828
+}</tool_output>" | tool_call_id: call_ec9a266e95d84676993188ac | name: calculator
+  [8] TOOL | content: "<tool_output>{
+  "expression": "5784 + 352 = 6136",
+  "result": 6136.0,
+  "timestamp_ms": 1774863715832
+}</tool_output>" | tool_call_id: call_d5bae0fdaffe4f2e86b48ef8 | name: calculator
+  [9] TOOL | content: "<tool_output>{
+  "expression": "42 + 5742 = 5784",
+  "result": 5784.0,
+  "timestamp_ms": 1774863715835
+}</tool_output>" | tool_call_id: call_f19f56c397604f3abac4926a | name: calculator
+  [10] TOOL | content: "<tool_output>{
+  "expression": "5784 + 352 = 6136",
+  "result": 6136.0,
+  "timestamp_ms": 1774863715838
+}</tool_output>" | tool_call_id: call_9825c9a1cd54497fae92b91c | name: calculator
+  [11] TOOL | content: "<tool_output>{
+  "expression": "42 + 5742 = 5784",
+  "result": 5784.0,
+  "timestamp_ms": 1774863715841
+}</tool_output>" | tool_call_id: call_f5f56ba93e0e4198a26ef770 | name: calculator
+  [12] TOOL | content: "<tool_output>{
+  "expression": "5784 + 352 = 6136",
+  "result": 6136.0,
+  "timestamp_ms": 1774863715844
+}</tool_output>" | tool_call_id: call_4ee872b1f040492e9d5af418 | name: calculator
+
+🤖 Agent: The result of the expression \(42 + 58 \times 99 + (88 \times 12 \div 3)\) is **6136**. Here's the breakdown:
+
+1. \(58 \times 99 = 5742\)
+2. \(88 \times 12 = 1056\)
+3. \(1056 \div 3 = 352\)
+4. \(42 + 5742 = 5784\)
+5. \(5784 + 352 = 6136\)
+
+🧑 You: 2026-03-30T09:41:56.953218Z  INFO            main mini_agent_wasm: 👋 User requested exit
+👋 Goodbye!
