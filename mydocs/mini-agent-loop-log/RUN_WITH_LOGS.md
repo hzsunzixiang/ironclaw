@@ -169,14 +169,14 @@ DEBUG mini_agent_loop::tools: Tool details tool_name=calculator description="Per
  INFO mini_agent_loop: 📝 User input received input="What is 42 + 58?"
  INFO mini_agent_loop: 📋 Building conversation context (system prompt + user message)
 DEBUG mini_agent_loop: Initial messages for agentic loop
-    system_prompt="You are a helpful assistant powered by the DeepSeek-V3 model..."
+    system_prompt="You are a helpful assistant. You have access to a calculator tool..."
     user_message="What is 42 + 58?"
     message_count=2
 ```
 
 **解读**：
 - 用户输入被捕获
-- 构建消息上下文：1 条 system prompt + 1 条 user message = 2 条消息
+- 构建消息上下文：1 条 system prompt（不含模型名，模型自己知道自己的身份）+ 1 条 user message = 2 条消息
 
 ### 阶段 3：进入 Agentic Loop
 

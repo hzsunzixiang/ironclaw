@@ -113,16 +113,16 @@ async fn main() {
     let mut registry = ToolRegistry::new();
     registry.register(Box::new(CalculatorTool));
 
-    // 3. Helper to build system prompt with current model identity
-    let make_system_prompt = |model: &str| -> ChatMessage {
-        ChatMessage::system(format!(
-            "You are a helpful assistant powered by the {} model. \
+    // 3. Helper to build system prompt (model-agnostic)
+    let make_system_prompt = || -> ChatMessage {
+        ChatMessage::system(
+            "You are a helpful assistant. \
              You have access to a calculator tool. \
              When the user asks a math question, use the calculator tool to compute the answer. \
              For non-math questions, respond directly. \
-             When asked about your identity, truthfully state that you are based on {}.",
-            model, model
-        ))
+             When asked about your identity, respond based on your own knowledge."
+                .to_string(),
+        )
     };
 
     // 4. Loop config
@@ -181,7 +181,7 @@ async fn main() {
         }
 
         // ── Build conversation context ──
-        let mut messages = vec![make_system_prompt(&current_model), ChatMessage::user(input)];
+        let mut messages = vec![make_system_prompt(), ChatMessage::user(input)];
 
         // ── Run the agentic loop ──
         println!("\n🤖 Agent thinking...");
