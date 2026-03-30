@@ -1,0 +1,181 @@
+# ============================================================================
+# lldbinit — mini-agent-loop attach debug script (pure LLDB, no Python)
+# ============================================================================
+#
+# All debug output goes to the LLDB terminal only, NOT into the target
+# process's stdout/stderr. This means debug info will NOT pollute the
+# application's normal output.
+#
+# Key: we use `script print(...)` (lldb-side output) instead of
+#      `expression (void)printf(...)` (target-process-side output).
+#
+# Usage:
+#   1. Start the program normally:
+#        ./target/debug/mini-agent-loop
+#
+#   2. Attach and load breakpoints (from project root):
+#        lldb -s debug/lldbinit -p $(pgrep mini-agent-loop)
+#
+#      Or with rust-lldb:
+#        rust-lldb -s debug/lldbinit -p $(pgrep mini-agent-loop)
+#
+#   3. Output goes directly to your lldb terminal (not the app's terminal).
+#      Redirect as you wish:
+#        lldb -s debug/lldbinit -p $(pgrep mini-agent-loop) 2>&1 | tee debug.log
+#
+#   4. To detach without killing the process:
+#        (lldb) detach
+#
+# All breakpoints auto-continue. The program runs normally with
+# debug info printed at each key point in the agent loop.
+# ============================================================================
+
+
+# ── Settings ──
+settings set auto-confirm true
+settings set target.process.thread.step-avoid-regexp ""
+settings set target.max-children-count 256
+
+
+# ── BP1: User input captured — main.rs:164 ──
+breakpoint set --file main.rs --line 164
+breakpoint command add
+  script print("\n" + "=" * 60 + "\n[BP1: USER INPUT  (main.rs:164)]\n" + "=" * 60)
+  frame variable input
+  script print("=" * 60 + "\n")
+  continue
+DONE
+
+# ── BP2: Build conversation context — main.rs:189 ──
+breakpoint set --file main.rs --line 189
+breakpoint command add
+  script print("\n" + "=" * 60 + "\n[BP2: BUILD MESSAGES  (main.rs:189)]\n" + "=" * 60)
+  frame variable current_model
+  script print("=" * 60 + "\n")
+  continue
+DONE
+
+# ── BP3: Enter agentic loop — main.rs:192 ──
+breakpoint set --file main.rs --line 192
+breakpoint command add
+  script print("\n" + "=" * 60 + "\n[BP3: ENTER AGENTIC LOOP  (main.rs:192)]\n" + "=" * 60)
+  frame variable messages
+  script print("=" * 60 + "\n")
+  continue
+DONE
+
+# ── BP4: run_agentic_loop entry — agent.rs:68 ──
+breakpoint set --file agent.rs --line 68
+breakpoint command add
+  script print("\n" + "=" * 60 + "\n[BP4: AGENTIC LOOP ENTRY  (agent.rs:68)]\n" + "=" * 60)
+  frame variable config
+  frame variable *messages
+  script print("=" * 60 + "\n")
+  continue
+DONE
+
+# ── BP5: Before LLM call — agent.rs:75 ──
+breakpoint set --file agent.rs --line 75
+breakpoint command add
+  script print("\n" + "=" * 60 + "\n[BP5: BEFORE LLM CALL  (agent.rs:75)]\n" + "=" * 60)
+  frame variable iteration
+  frame variable *messages
+  frame variable tool_defs
+  script print("=" * 60 + "\n")
+  continue
+DONE
+
+# ── BP6: After LLM response — agent.rs:77 ──
+breakpoint set --file agent.rs --line 77
+breakpoint command add
+  script print("\n" + "=" * 60 + "\n[BP6: LLM RESPONSE RECEIVED  (agent.rs:77)]\n" + "=" * 60)
+  frame variable response
+  script print("=" * 60 + "\n")
+  continue
+DONE
+
+# ── BP7: Text response branch — agent.rs:80 ──
+breakpoint set --file agent.rs --line 80
+breakpoint command add
+  script print("\n" + "=" * 60 + "\n[BP7: LLM TEXT RESPONSE  (agent.rs:80)]\n" + "=" * 60)
+  frame variable text
+  script print("=" * 60 + "\n")
+  continue
+DONE
+
+# ── BP8: Tool calls branch — agent.rs:89 ──
+breakpoint set --file agent.rs --line 89
+breakpoint command add
+  script print("\n" + "=" * 60 + "\n[BP8: LLM TOOL CALLS  (agent.rs:89)]\n" + "=" * 60)
+  frame variable tool_calls
+  frame variable content
+  script print("=" * 60 + "\n")
+  continue
+DONE
+
+# ── BP9: execute_tool_with_safety — tool execution ──
+breakpoint set --name mini_agent_loop::tools::execute_tool_with_safety
+breakpoint command add
+  script print("\n" + "=" * 60 + "\n[BP9: TOOL EXECUTION  (execute_tool_with_safety)]\n" + "=" * 60)
+  frame variable tool_name
+  frame variable params
+  script print("=" * 60 + "\n")
+  continue
+DONE
+
+# ── BP10: process_tool_result — tool result ──
+breakpoint set --name mini_agent_loop::tools::process_tool_result
+breakpoint command add
+  script print("\n" + "=" * 60 + "\n[BP10: TOOL RESULT  (process_tool_result)]\n" + "=" * 60)
+  frame variable tool_name
+  frame variable tool_call_id
+  frame variable result
+  script print("=" * 60 + "\n")
+  continue
+DONE
+
+# ── BP11: Calculator execute — calculator.rs:48 ──
+breakpoint set --file calculator.rs --line 48
+breakpoint command add
+  script print("\n" + "=" * 60 + "\n[BP11: CALCULATOR TOOL  (calculator.rs:48)]\n" + "=" * 60)
+  frame variable params
+  script print("=" * 60 + "\n")
+  continue
+DONE
+
+# ── BP12: OpenAI chat() request — openai.rs:275 ──
+breakpoint set --file openai.rs --line 275
+breakpoint command add
+  script print("\n" + "=" * 60 + "\n[BP12: OPENAI CHAT REQUEST  (openai.rs:275)]\n" + "=" * 60)
+  frame variable *self
+  frame variable messages
+  frame variable tools
+  script print("=" * 60 + "\n")
+  continue
+DONE
+
+# ── BP13: OpenAI response parsing — openai.rs:306 ──
+breakpoint set --file openai.rs --line 306
+breakpoint command add
+  script print("\n" + "=" * 60 + "\n[BP13: OPENAI RESPONSE PARSE  (openai.rs:306)]\n" + "=" * 60)
+  frame variable status
+  script print("=" * 60 + "\n")
+  continue
+DONE
+
+# ── BP14: Loop outcome — main.rs:193 ──
+breakpoint set --file main.rs --line 193
+breakpoint command add
+  script print("\n" + "=" * 60 + "\n[BP14: FINAL RESPONSE  (main.rs:193)]\n" + "=" * 60)
+  frame variable text
+  script print("=" * 60 + "\n")
+  continue
+DONE
+
+
+# ── Summary ──
+breakpoint list --brief
+script print("\n" + "=" * 60 + "\n  lldbinit loaded! 14 breakpoints set.\n  All breakpoints auto-continue.\n  Debug output goes to LLDB terminal ONLY (no process pollution).\n  Process is attached. Resuming automatically...\n" + "=" * 60 + "\n")
+
+# ── Auto-resume the attached process ──
+continue
