@@ -538,3 +538,229 @@ Turn 存储格式（结构化）          →    LLM 输入格式（扁平消息
 ### 核心结论
 
 > **Session → Thread → Turn 三层模型完整工作**。多轮记忆通过 `Thread::messages()` 重建机制实现，Thread 之间完全隔离，切换后记忆完整恢复。整个测试在 ~5 秒内完成，无错误。
+
+---
+
+## 十一、线程模型架构图
+
+### 11.1 三层数据结构（类图）
+
+```mermaid
+classDiagram
+    class Session {
+        +Uuid id
+        +String user_id
+        +Option~Uuid~ active_thread
+        +HashMap~Uuid, Thread~ threads
+        +DateTime created_at
+        +DateTime last_active_at
+        --
+        +create_thread() Thread
+        +switch_thread(Uuid) bool
+        +active_thread() Option~Thread~
+        +get_or_create_thread() Thread
+        +list_threads() Vec~ThreadSummary~
+    }
+
+    class Thread {
+        +Uuid id
+        +Uuid session_id
+        +ThreadState state
+        +Vec~Turn~ turns
+        +DateTime created_at
+        +DateTime updated_at
+        --
+        +start_turn(String) Turn
+        +complete_turn(String)
+        +fail_turn(String)
+        +messages() Vec~ChatMessage~ ⭐核心方法
+    }
+
+    class Turn {
+        +usize turn_number
+        +String user_input
+        +Option~String~ response
+        +Vec~TurnToolCall~ tool_calls
+        +TurnState state
+        +DateTime started_at
+        +Option~DateTime~ completed_at
+        --
+        +record_tool_call(name, params)
+        +record_tool_result(result)
+        +complete(response)
+        +fail(error)
+    }
+
+    class TurnToolCall {
+        +String name
+        +Value parameters
+        +Option~Value~ result
+        +Option~String~ error
+    }
+
+    class ThreadState {
+        <<enumeration>>
+        Idle
+        Processing
+    }
+
+    class TurnState {
+        <<enumeration>>
+        Processing
+        Completed
+        Failed
+    }
+
+    Session "1" --> "*" Thread : contains
+    Thread "1" --> "*" Turn : contains
+    Turn "1" --> "*" TurnToolCall : contains
+    Thread --> ThreadState
+    Turn --> TurnState
+```
+
+### 11.2 运行时实例关系（对象图）
+
+```mermaid
+graph TB
+    subgraph Session["🗂️ Session 2c10fb56"]
+        direction TB
+        S_INFO["user: cli-user<br/>active_thread: → Thread #2"]
+
+        subgraph T1["🧵 Thread #1 a61a8f7f — 4 turns"]
+            direction TB
+            TURN0["Turn #0 ✅<br/>USR: What is 42 + 58?<br/>🔧 calculator add,42,58 → 100<br/>AST: The result is 100."]
+            TURN1["Turn #1 ✅<br/>USR: Now multiply that result by 3<br/>🔧 calculator mul,100,3 → 300<br/>AST: The result is 300."]
+            TURN2["Turn #2 ✅<br/>USR: What was my first question?<br/>AST: Your first question was 42+58"]
+            TURN3["Turn #3 ✅<br/>USR: Do you remember what we calculated?<br/>AST: Yes! 42+58=100, 100×3=300"]
+            TURN0 --> TURN1 --> TURN2 --> TURN3
+        end
+
+        subgraph T2["🧵 Thread #2 e6c34b14 — 2 turns ← active"]
+            direction TB
+            TURN4["Turn #0 ✅<br/>USR: What is 7 * 8?<br/>🔧 calculator mul,7,8 → 56<br/>AST: The result is 56."]
+            TURN5["Turn #1 ✅<br/>USR: Now add 100 to that<br/>🔧 calculator add,56,100 → 156<br/>AST: 56 + 100 = 156"]
+            TURN4 --> TURN5
+        end
+    end
+
+    style T2 stroke:#2196F3,stroke-width:3px
+    style S_INFO fill:#f9f9f9,stroke:#999
+```
+
+### 11.3 消息重建流程（Thread::messages()）
+
+```mermaid
+flowchart LR
+    subgraph Structured["结构化存储 Turn"]
+        direction TB
+        T0["Turn #0<br/>input: 42+58?<br/>tool: calc add,42,58 → 100<br/>response: result is 100"]
+        T1["Turn #1<br/>input: multiply by 3<br/>tool: calc mul,100,3 → 300<br/>response: result is 300"]
+        T2["Turn #2<br/>input: first question?<br/>response: 42+58"]
+    end
+
+    REBUILD["🔄<br/>Thread::messages<br/>重建"]
+
+    subgraph Flat["扁平消息列表 ChatMessage"]
+        direction TB
+        M0["SYS system prompt"]
+        M1["USR What is 42+58?"]
+        M2["AST tool_calls: calc add,42,58"]
+        M3["TOL result: 100"]
+        M4["AST The result is 100."]
+        M5["USR Now multiply that by 3"]
+        M6["AST tool_calls: calc mul,100,3"]
+        M7["TOL result: 300"]
+        M8["AST The result is 300."]
+        M9["USR What was my first question?"]
+        M0 --- M1 --- M2 --- M3 --- M4 --- M5 --- M6 --- M7 --- M8 --- M9
+    end
+
+    T0 --> REBUILD
+    T1 --> REBUILD
+    T2 --> REBUILD
+    REBUILD --> Flat
+```
+
+### 11.4 Thread 隔离机制（时序图）
+
+```mermaid
+sequenceDiagram
+    participant U as 👤 用户
+    participant S as 🗂️ Session
+    participant T1 as 🧵 Thread #1
+    participant T2 as 🧵 Thread #2
+    participant LLM as 🤖 LLM
+
+    Note over S: 启动时自动创建 Thread #1
+    U->>T1: What is 42 + 58?
+    T1->>T1: start_turn(0)
+    T1->>LLM: messages() → [SYS, USR]
+    LLM-->>T1: tool_call → result is 100
+    T1->>T1: complete_turn()
+
+    U->>T1: Now multiply that by 3
+    T1->>T1: start_turn(1)
+    T1->>LLM: messages() → [SYS, USR, AST, TOL, AST, USR]
+    LLM-->>T1: tool_call → result is 300
+    T1->>T1: complete_turn()
+
+    U->>S: /new
+    S->>T2: 创建 Thread #2
+    Note over S: active_thread → Thread #2
+
+    U->>T2: What is 7 * 8?
+    T2->>T2: start_turn(0)
+    T2->>LLM: messages() → [SYS, USR]
+    Note over T2,LLM: ⚠️ 只有 2 条消息！<br/>完全看不到 Thread #1 的历史
+
+    LLM-->>T2: tool_call → result is 56
+    T2->>T2: complete_turn()
+
+    U->>S: /switch 1
+    Note over S: active_thread → Thread #1
+
+    U->>T1: Do you remember?
+    T1->>T1: start_turn(3)
+    T1->>LLM: messages() → [SYS + 11条历史消息]
+    Note over T1,LLM: ✅ 完整的 Thread #1 历史<br/>包含 42+58=100, 100×3=300
+
+    LLM-->>T1: Yes! 42+58=100, 100×3=300
+    T1->>T1: complete_turn()
+```
+
+### 11.5 单个 Turn 的 Agentic Loop（流程图）
+
+```mermaid
+flowchart TB
+    START([用户输入]) --> CREATE_TURN["Thread.start_turn()<br/>创建 Turn #N"]
+    CREATE_TURN --> REBUILD["Thread.messages()<br/>从所有 Turn 重建消息列表"]
+    REBUILD --> SEND["发送消息给 LLM<br/>Iteration i/10"]
+
+    SEND --> CHECK{LLM 返回<br/>finish_reason?}
+
+    CHECK -->|tool_calls| RECORD["Turn.record_tool_call()<br/>记录工具调用"]
+    RECORD --> EXEC["执行 WASM 工具"]
+    EXEC --> RESULT["Turn.record_tool_result()<br/>记录工具结果"]
+    RESULT --> APPEND["追加 AST+TOL 消息<br/>到消息列表"]
+    APPEND --> SEND
+
+    CHECK -->|stop| COMPLETE["Thread.complete_turn()<br/>Turn 状态 → Completed"]
+    COMPLETE --> OUTPUT([输出回复给用户])
+
+    CHECK -->|max iterations| FAIL["Thread.fail_turn()<br/>Turn 状态 → Failed"]
+    FAIL --> ERROR([输出错误])
+
+    style CHECK fill:#FFE082
+    style COMPLETE fill:#C8E6C9
+    style FAIL fill:#FFCDD2
+```
+
+### 图表索引
+
+| 图 | 类型 | 内容 |
+|---|------|------|
+| **11.1** | 类图 | Session → Thread → Turn → TurnToolCall 的数据结构和方法 |
+| **11.2** | 对象图 | 测试运行时的实际实例关系（2 个 Thread，6 个 Turn） |
+| **11.3** | 流程图 | `Thread::messages()` 如何将结构化 Turn 转为扁平 ChatMessage 列表 |
+| **11.4** | 时序图 | 不同 Thread 之间消息完全隔离的时序过程 |
+| **11.5** | 流程图 | 单个 Turn 内部的 Agentic Loop 迭代执行流程 |
