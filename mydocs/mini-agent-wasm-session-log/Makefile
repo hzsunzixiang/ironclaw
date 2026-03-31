@@ -52,6 +52,16 @@ run-trace: build
 	@echo "$(YELLOW)═══ Running with RUST_LOG=trace (full tracing) ═══$(RESET)"
 	./run-trace.sh
 
+run-session-test: build
+	@echo ""
+	@echo "$(YELLOW)═══ Running multi-turn Session test ═══$(RESET)"
+	./run-session-test.sh
+
+run-session-test-full: build
+	@echo ""
+	@echo "$(YELLOW)═══ Running comprehensive Session test ═══$(RESET)"
+	./run-session-test.sh --scenario full
+
 debug:
 	@echo "$(CYAN)━━━ Building Guest (WASM, debug) ━━━$(RESET)"
 	cd $(GUEST_DIR) && cargo build --target wasm32-wasip2
@@ -78,6 +88,8 @@ help:
 	@echo "  $(GREEN)run$(RESET)          Build and run (release mode)"
 	@echo "  $(GREEN)run-debug$(RESET)    Build and run (debug mode)"
 	@echo "  $(GREEN)run-trace$(RESET)    Build and run with RUST_LOG=trace (saves to trace-output-raw.log)"
+	@echo "  $(GREEN)run-session-test$(RESET)  Multi-turn session test (default scenario: basic)"
+	@echo "  $(GREEN)run-session-test-full$(RESET)  Comprehensive session test (all features)"
 	@echo "  $(GREEN)clean$(RESET)        Remove all build artifacts"
 	@echo "  $(GREEN)check-deps$(RESET)   Check required tools"
 	@echo ""
