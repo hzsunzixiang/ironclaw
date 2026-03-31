@@ -1,0 +1,1969 @@
+═══════════════════════════════════════════════════════════════
+  Session Test Report
+  Generated: 2026-03-31 10:47:32
+  Source: scenario: full
+═══════════════════════════════════════════════════════════════
+
+━━━ INPUT SEQUENCE ━━━
+  1  What is 42 + 58?
+  2  Now multiply that result by 3
+  3  What was my first question?
+  4  /history
+  5  /new
+  6  What is 7 * 8?
+  7  Now add 100 to that
+  8  /threads
+  9  /switch 1
+ 10  Do you remember what we calculated? What was the final answer?
+ 11  /history
+ 12  /switch 2
+ 13  /history
+ 14  /session
+ 15  quit
+
+━━━ EXECUTION LOG (stdout + trace interleaved) ━━━
+
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.11s
+     Running `host/target/debug/mini-agent-wasm-session guest/target/wasm32-wasip2/release/guest_tool.wasm`
+2026-03-31T02:47:35.219100Z  INFO main mini_agent_wasm_session: 🚀 Starting Mini Agent Loop + WASM Sandbox + Session — tracing initialized
+╔══════════════════════════════════════════════════════════════╗
+║   Mini Agent + WASM Sandbox + Session — IronClaw Distilled ║
+╠══════════════════════════════════════════════════════════════╣
+║                                                            ║
+║  NEW: Session/Thread/Turn conversation management!         ║
+║    • Multi-turn: LLM remembers your conversation history   ║
+║    • Multiple threads: start new conversations with /new   ║
+║    • Turn tracking: each Q&A pair is a recorded Turn       ║
+║                                                            ║
+║  Session commands:                                         ║
+║    /new              Create a new conversation thread      ║
+║    /threads          List all threads                      ║
+║    /switch <n>       Switch to thread #n                   ║
+║    /history          Show turn history                     ║
+║    /session          Show session info                     ║
+║                                                            ║
+║  Other commands:                                           ║
+║    /model <name>     Switch LLM model                      ║
+║    /models           List available models                  ║
+║    quit              Exit                                   ║
+║                                                            ║
+║  Config: ./HAI_WOA.json (or ~/HAI_WOA.json)                ║
+║                                                            ║
+║  Try multi-turn:                                           ║
+║    1. "What is 42 + 58?"                                   ║
+║    2. "Now multiply that result by 3"                      ║
+║    3. "/history" to see the conversation                   ║
+║                                                            ║
+╚══════════════════════════════════════════════════════════════╝
+
+2026-03-31T02:47:35.219517Z  INFO main mini_agent_wasm_session: 🔧 Loading WASM tool... wasm_path=guest/target/wasm32-wasip2/release/guest_tool.wasm
+🔧 Loading WASM tool from: guest/target/wasm32-wasip2/release/guest_tool.wasm
+2026-03-31T02:47:35.219595Z  INFO main mini_agent_wasm_session::tools::wasm: 🔧 Creating WASM tool engine wasm_path=guest/target/wasm32-wasip2/release/guest_tool.wasm fuel_limit=1000000
+2026-03-31T02:47:35.221246Z DEBUG main mini_agent_wasm_session::tools::wasm: Loading WASM bytes from file wasm_path=guest/target/wasm32-wasip2/release/guest_tool.wasm
+2026-03-31T02:47:35.222376Z  INFO main mini_agent_wasm_session::tools::wasm: WASM file loaded (141583 bytes) wasm_size=141583
+2026-03-31T02:47:35.222384Z DEBUG main mini_agent_wasm_session::tools::wasm: Compiling WASM component...
+2026-03-31T02:47:35.602189Z  INFO main mini_agent_wasm_session::tools::wasm: ✅ WASM component compiled successfully
+2026-03-31T02:47:35.602225Z DEBUG main mini_agent_wasm_session::tools::wasm: Instantiating WASM component to read metadata...
+2026-03-31T02:47:35.604022Z  INFO main mini_agent_wasm_session::tools::wasm: ✅ WASM tool metadata loaded: name='calculator' tool_name=calculator tool_description=A sandboxed calculator tool. Performs basic math operations (add, sub, mul, div) inside a WASM sandbox.
+2026-03-31T02:47:35.604078Z DEBUG main mini_agent_wasm_session::tools::wasm: WASM tool schema tool_schema={
+  "properties": {
+    "a": {
+      "description": "First operand",
+      "type": "number"
+    },
+    "b": {
+      "description": "Second operand",
+      "type": "number"
+    },
+    "operation": {
+      "description": "Math operation: add, sub, mul, div",
+      "enum": [
+        "add",
+        "sub",
+        "mul",
+        "div"
+      ],
+      "type": "string"
+    }
+  },
+  "required": [
+    "operation",
+    "a",
+    "b"
+  ],
+  "type": "object"
+}
+2026-03-31T02:47:35.604237Z  INFO main mini_agent_wasm_session: ✅ WASM tool loaded and compiled tool_name=calculator tool_description=A sandboxed calculator tool. Performs basic math operations (add, sub, mul, div) inside a WASM sandbox. fuel_limit=1000000
+2026-03-31T02:47:35.604256Z DEBUG main mini_agent_wasm_session: WASM tool schema tool_schema={
+  "properties": {
+    "a": {
+      "description": "First operand",
+      "type": "number"
+    },
+    "b": {
+      "description": "Second operand",
+      "type": "number"
+    },
+    "operation": {
+      "description": "Math operation: add, sub, mul, div",
+      "enum": [
+        "add",
+        "sub",
+        "mul",
+        "div"
+      ],
+      "type": "string"
+    }
+  },
+  "required": [
+    "operation",
+    "a",
+    "b"
+  ],
+  "type": "object"
+}
+✅ WASM tool loaded and compiled
+   Name: calculator
+   Description: A sandboxed calculator tool. Performs basic math operations (add, sub, mul, div) inside a WASM sandbox.
+   Fuel limit: 1000000 units per execution
+
+2026-03-31T02:47:35.604268Z  INFO main mini_agent_wasm_session: 📂 Loading LLM configuration from HAI_WOA.json ...
+2026-03-31T02:47:35.604286Z DEBUG main mini_agent_wasm_session::llm::openai: Loading config file path=HAI_WOA.json
+2026-03-31T02:47:35.605747Z TRACE main mini_agent_wasm_session::llm::openai: Config file read successfully content_len=518
+2026-03-31T02:47:35.605895Z DEBUG main mini_agent_wasm_session::llm::openai: Config parsed: default model='openai/DeepSeek-V3-0324', 5 model shortcuts model=openai/DeepSeek-V3-0324 model_count=5
+2026-03-31T02:47:35.605928Z  INFO main mini_agent_wasm_session: ✅ Config loaded successfully model=openai/DeepSeek-V3-0324 base_url=http://api.haihub.cn/v1
+2026-03-31T02:47:35.605934Z DEBUG main mini_agent_wasm_session: Available model shortcuts available_models=[("ds", "openai/DeepSeek-V3-0324"), ("ds31", "openai/DeepSeek-V3.1"), ("kimi", "openai/Kimi-K2"), ("qwen", "openai/Qwen3-235B-A22B"), ("qwen32", "openai/Qwen3-32B-FP8")]
+✅ Loaded config from ./HAI_WOA.json
+   Model: openai/DeepSeek-V3-0324
+   Base URL: http://api.haihub.cn/v1
+   Available shortcuts: ds → openai/DeepSeek-V3-0324, ds31 → openai/DeepSeek-V3.1, kimi → openai/Kimi-K2, qwen → openai/Qwen3-235B-A22B, qwen32 → openai/Qwen3-32B-FP8
+2026-03-31T02:47:35.606006Z  INFO main mini_agent_wasm_session: 🤖 Initial model selected current_model=DeepSeek-V3-0324
+2026-03-31T02:47:35.606010Z DEBUG main mini_agent_wasm_session: Creating new LLM provider instance model=DeepSeek-V3-0324
+2026-03-31T02:47:35.606033Z  INFO main mini_agent_wasm_session::llm::openai: Creating OpenAI-compatible provider (timeout=120s) model=DeepSeek-V3-0324 base_url=http://api.haihub.cn/v1 api_key_prefix=sk-322ca...
+
+2026-03-31T02:47:35.609626Z DEBUG main mini_agent_wasm_session::tools: Creating new ToolRegistry
+2026-03-31T02:47:35.609646Z  INFO main mini_agent_wasm_session::tools: Registering tool: 'calculator' tool_name=calculator
+2026-03-31T02:47:35.609672Z DEBUG main mini_agent_wasm_session::tools: Tool details tool_name=calculator description=A sandboxed calculator tool. Performs basic math operations (add, sub, mul, div) inside a WASM sandbox. schema={
+  "properties": {
+    "a": {
+      "description": "First operand",
+      "type": "number"
+    },
+    "b": {
+      "description": "Second operand",
+      "type": "number"
+    },
+    "operation": {
+      "description": "Math operation: add, sub, mul, div",
+      "enum": [
+        "add",
+        "sub",
+        "mul",
+        "div"
+      ],
+      "type": "string"
+    }
+  },
+  "required": [
+    "operation",
+    "a",
+    "b"
+  ],
+  "type": "object"
+}
+2026-03-31T02:47:35.609697Z  INFO main mini_agent_wasm_session: 🔧 Tool registry initialized (WASM sandboxed tools) tools=["calculator"]
+2026-03-31T02:47:35.609745Z DEBUG main mini_agent_wasm_session: Full tool definitions (sent to LLM) tool_definitions=[
+  {
+    "description": "A sandboxed calculator tool. Performs basic math operations (add, sub, mul, div) inside a WASM sandbox.",
+    "name": "calculator",
+    "parameters": {
+      "properties": {
+        "a": {
+          "description": "First operand",
+          "type": "number"
+        },
+        "b": {
+          "description": "Second operand",
+          "type": "number"
+        },
+        "operation": {
+          "description": "Math operation: add, sub, mul, div",
+          "enum": [
+            "add",
+            "sub",
+            "mul",
+            "div"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "operation",
+        "a",
+        "b"
+      ],
+      "type": "object"
+    }
+  }
+]
+✅ Tool registry ready (WASM sandboxed tools)
+   📦 calculator — A sandboxed calculator tool. Performs basic math operations (add, sub, mul, div) inside a WASM sandbox.
+
+2026-03-31T02:47:35.609786Z  INFO main mini_agent_wasm_session::session: 🆕 New session created session_id=2c10fb56 user_id=cli-user
+2026-03-31T02:47:35.609801Z  INFO main mini_agent_wasm_session::session: 🧵 New thread created thread_id=a61a8f7f session_id=2c10fb56
+2026-03-31T02:47:35.609807Z  INFO main mini_agent_wasm_session::session: 🧵 Created new thread (now 1 threads in session) session_id=2c10fb56 thread_id=a61a8f7f thread_count=1
+2026-03-31T02:47:35.609816Z  INFO main mini_agent_wasm_session: ✅ Session created with initial thread session_id=2c10fb56 thread_id=a61a8f7f
+✅ Session created: 2c10fb56
+   Thread: a61a8f7f
+
+2026-03-31T02:47:35.609826Z  INFO main mini_agent_wasm_session: ⚙️  Agentic loop config max_iterations=10
+2026-03-31T02:47:35.609830Z  INFO main mini_agent_wasm_session: 🔄 Entering main input loop — waiting for user input...
+
+🧑 [T1:a61a] You: 2026-03-31T02:47:35.609842Z  INFO main mini_agent_wasm_session: 📝 User input received input=What is 42 + 58?
+2026-03-31T02:47:35.609855Z DEBUG main mini_agent_wasm_session: Building system prompt for current model system_prompt_model=DeepSeek-V3-0324
+2026-03-31T02:47:35.609861Z  INFO main mini_agent_wasm_session::commands: 🤖 Processing user input through Session pipeline input=What is 42 + 58?
+
+🤖 Agent thinking...
+2026-03-31T02:47:35.609919Z  INFO main process_user_input{user_input=What is 42 + 58?}: mini_agent_wasm_session::agent: 📋 Processing user input in thread thread_id=a61a8f7f existing_turns=0
+2026-03-31T02:47:35.609931Z  INFO main process_user_input{user_input=What is 42 + 58?}: mini_agent_wasm_session::session: 📝 Starting Turn #0 in thread thread_id=a61a8f7f turn_number=0 user_input=What is 42 + 58?
+2026-03-31T02:47:35.609939Z DEBUG main process_user_input{user_input=What is 42 + 58?}: mini_agent_wasm_session::session: Creating new Turn #0 turn_number=0 user_input=What is 42 + 58?
+2026-03-31T02:47:35.609946Z  INFO main process_user_input{user_input=What is 42 + 58?}: mini_agent_wasm_session::agent: 📝 Turn #1 started turn_number=1 thread_id=a61a8f7f
+  📝 Turn #1 started in thread a61a8f7f
+2026-03-31T02:47:35.609958Z DEBUG main process_user_input{user_input=What is 42 + 58?}: mini_agent_wasm_session::session: 🔄 Rebuilding ChatMessage history from 1 turns thread_id=a61a8f7f turn_count=1
+2026-03-31T02:47:35.609966Z TRACE main process_user_input{user_input=What is 42 + 58?}: mini_agent_wasm_session::session: Added user message for Turn #0 turn=0
+2026-03-31T02:47:35.609972Z  INFO main process_user_input{user_input=What is 42 + 58?}: mini_agent_wasm_session::session: 📨 Rebuilt 1 messages from 1 turns thread_id=a61a8f7f total_messages=1 turn_count=1
+2026-03-31T02:47:35.609980Z  INFO main process_user_input{user_input=What is 42 + 58?}: mini_agent_wasm_session::agent: 📨 Context rebuilt: 2 messages (1 system + 1 from 1 turns) total_messages=2 history_messages=1 turn_count=1
+2026-03-31T02:47:35.609989Z DEBUG main process_user_input{user_input=What is 42 + 58?}: mini_agent_wasm_session::agent: Message role sequence messages_roles=SYS → USR
+  📨 Context: 2 messages (from 1 turns)
+2026-03-31T02:47:35.609996Z  INFO main process_user_input{user_input=What is 42 + 58?}: mini_agent_wasm_session::agent: 🔄 Launching agentic loop...
+2026-03-31T02:47:35.610023Z  INFO main process_user_input{user_input=What is 42 + 58?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: 🔄 Entering agentic loop tool_count=1 tools=["calculator"] initial_message_count=2
+2026-03-31T02:47:35.610031Z  INFO main process_user_input{user_input=What is 42 + 58?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: ━━━ Iteration 1/10 ━━━ iteration=1 max=10 message_count=2 recorded_tool_calls=0
+
+--- Iteration 1/10 ---
+2026-03-31T02:47:35.610041Z  INFO main process_user_input{user_input=What is 42 + 58?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: 📤 Step 1: Calling LLM...
+2026-03-31T02:47:35.610046Z DEBUG main process_user_input{user_input=What is 42 + 58?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: Sending 2 messages and 1 tool definitions to LLM message_count=2 tool_count=1
+2026-03-31T02:47:35.610064Z TRACE main process_user_input{user_input=What is 42 + 58?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: Message flow before LLM call messages_summary=[0]SYS → [1]USR
+2026-03-31T02:47:35.610080Z  INFO main process_user_input{user_input=What is 42 + 58?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: 📤 Preparing LLM API request url=http://api.haihub.cn/v1/chat/completions model=DeepSeek-V3-0324 message_count=2 tool_count=1
+2026-03-31T02:47:35.610125Z DEBUG main process_user_input{user_input=What is 42 + 58?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: 📤 Full OpenAI API request body request_body={
+  "model": "DeepSeek-V3-0324",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a helpful assistant powered by the DeepSeek-V3-0324 model. You have access to a calculator tool. When the user asks a math question, use the calculator tool to compute the answer. For non-math questions, respond directly. You have conversation memory — you can reference previous turns in this thread. When asked about your identity, truthfully state that you are based on DeepSeek-V3-0324."
+    },
+    {
+      "role": "user",
+      "content": "What is 42 + 58?"
+    }
+  ],
+  "tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "calculator",
+        "description": "A sandboxed calculator tool. Performs basic math operations (add, sub, mul, div) inside a WASM sandbox.",
+        "parameters": {
+          "properties": {
+            "a": {
+              "description": "First operand",
+              "type": "number"
+            },
+            "b": {
+              "description": "Second operand",
+              "type": "number"
+            },
+            "operation": {
+              "description": "Math operation: add, sub, mul, div",
+              "enum": [
+                "add",
+                "sub",
+                "mul",
+                "div"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "operation",
+            "a",
+            "b"
+          ],
+          "type": "object"
+        }
+      }
+    }
+  ],
+  "tool_choice": "auto"
+}
+2026-03-31T02:47:35.610140Z DEBUG main process_user_input{user_input=What is 42 + 58?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: Request summary: 2 messages [system → user], 1 tools model=DeepSeek-V3-0324 message_count=2 tool_count=1 tool_choice=Some("auto") messages_roles=system → user
+2026-03-31T02:47:35.610149Z  INFO main process_user_input{user_input=What is 42 + 58?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: 🌐 Sending HTTP POST to http://api.haihub.cn/v1/chat/completions...
+2026-03-31T02:47:36.351044Z  INFO main process_user_input{user_input=What is 42 + 58?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: 📥 HTTP response received: 200 OK in 740ms status=200 OK elapsed_ms=740
+2026-03-31T02:47:36.351898Z DEBUG main process_user_input{user_input=What is 42 + 58?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: 📥 Raw API response body (615 bytes) response_body={"id":"f2fb280468f946439a7d3b451d83f981","object":"chat.completion","created":1774925256,"model":"DeepSeek-V3-0324","choices":[{"index":0,"message":{"role":"assistant","content":null,"reasoning_content":null,"tool_calls":[{"id":"call_94f22709182746f3a225c171","index":-1,"type":"function","function":{"name":"calculator","arguments":"{\"a\": 42, \"b\": 58, \"operation\": \"add\"}"}}]},"logprobs":null,"finish_reason":"tool_calls","matched_stop":null}],"usage":{"prompt_tokens":322,"total_tokens":348,"completion_tokens":26,"prompt_tokens_details":null,"reasoning_tokens":0},"metadata":{"weight_version":"default"}} response_len=615
+2026-03-31T02:47:36.352305Z DEBUG main process_user_input{user_input=What is 42 + 58?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: Parsed response: 1 choice(s) choice_count=1
+2026-03-31T02:47:36.352399Z DEBUG main process_user_input{user_input=What is 42 + 58?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: Response choice: finish_reason=tool_calls, has_content=false, has_tool_calls=true finish_reason=tool_calls has_content=false has_tool_calls=true
+2026-03-31T02:47:36.352492Z  INFO main process_user_input{user_input=What is 42 + 58?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: 🔧 LLM requested 1 tool call(s) tool_call_count=1
+2026-03-31T02:47:36.352570Z DEBUG main process_user_input{user_input=What is 42 + 58?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: Parsing tool call [0]: calculator (id=call_94f22709182746f3a225c171) index=0 id=call_94f22709182746f3a225c171 function_name=calculator raw_arguments={"a": 42, "b": 58, "operation": "add"}
+2026-03-31T02:47:36.352728Z TRACE main process_user_input{user_input=What is 42 + 58?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: Parsed tool arguments for 'calculator' parsed_arguments={
+  "a": 42,
+  "b": 58,
+  "operation": "add"
+}
+2026-03-31T02:47:36.352834Z  INFO main process_user_input{user_input=What is 42 + 58?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: 📥 LLM responded in 742ms (finish_reason=ToolUse) elapsed_ms=742 finish_reason=ToolUse
+2026-03-31T02:47:36.352913Z  INFO main process_user_input{user_input=What is 42 + 58?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: 🔧 LLM returned TOOL CALLS (1 tool(s)) tool_call_count=1 has_content=false
+2026-03-31T02:47:36.353005Z DEBUG main process_user_input{user_input=What is 42 + 58?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: Tool call [0]: calculator (id=call_94f22709182746f3a225c171) index=0 tool_name=calculator tool_call_id=call_94f22709182746f3a225c171 arguments={
+  "a": 42,
+  "b": 58,
+  "operation": "add"
+}
+  🔧 LLM wants to call 1 tool(s)
+2026-03-31T02:47:36.353074Z  INFO main process_user_input{user_input=What is 42 + 58?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: 📝 Adding assistant message with tool calls to conversation context
+2026-03-31T02:47:36.353145Z DEBUG main process_user_input{user_input=What is 42 + 58?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: Context now has 3 messages (after adding assistant tool call message) message_count=3
+2026-03-31T02:47:36.353184Z  INFO main process_user_input{user_input=What is 42 + 58?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: ⚙️  Executing tool [1/1]: calculator index=0 tool=calculator
+2026-03-31T02:47:36.353240Z DEBUG main process_user_input{user_input=What is 42 + 58?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: Tool execution input tool_name=calculator tool_call_id=call_94f22709182746f3a225c171 arguments={
+  "a": 42,
+  "b": 58,
+  "operation": "add"
+}
+2026-03-31T02:47:36.353279Z  INFO main process_user_input{user_input=What is 42 + 58?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::tools: 🔍 Looking up tool in registry tool=calculator
+2026-03-31T02:47:36.353325Z DEBUG main process_user_input{user_input=What is 42 + 58?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::tools: Tool found, preparing execution tool=calculator params={
+  "a": 42,
+  "b": 58,
+  "operation": "add"
+}
+  ⚙️  Executing tool: calculator with params: {"a":42,"b":58,"operation":"add"}
+2026-03-31T02:47:36.353381Z  INFO main process_user_input{user_input=What is 42 + 58?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::tools: ⏱️  Executing tool with 30s timeout tool=calculator timeout_secs=30
+2026-03-31T02:47:36.353438Z  INFO main process_user_input{user_input=What is 42 + 58?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::tools::wasm: 🔧 WasmTool::execute() — dispatching to WASM sandbox tool=calculator params={"a":42,"b":58,"operation":"add"}
+2026-03-31T02:47:36.354036Z  INFO tokio-rt-worker mini_agent_wasm_session::tools::wasm: 🏖️  Executing tool in WASM sandbox tool=calculator params={"a":42,"b":58,"operation":"add"} fuel_limit=1000000
+2026-03-31T02:47:36.364043Z DEBUG tokio-rt-worker mini_agent_wasm_session::tools::wasm: Instantiating WASM guest in sandbox...
+2026-03-31T02:47:36.365057Z  INFO tokio-rt-worker mini_agent_wasm_session::tools::wasm: 📤 Calling WASM guest execute() function
+2026-03-31T02:47:36.365686Z  INFO tokio-rt-worker mini_agent_wasm_session::tools::wasm: 📋 [WASM LOG] [INFO] Calculating: 42 add 58 wasm_log_level=INFO wasm_message=Calculating: 42 add 58
+    📋 [WASM LOG] [INFO] Calculating: 42 add 58
+2026-03-31T02:47:36.365986Z TRACE tokio-rt-worker mini_agent_wasm_session::tools::wasm: WASM guest called now_millis() millis=1774925256365
+2026-03-31T02:47:36.366093Z  INFO tokio-rt-worker mini_agent_wasm_session::tools::wasm: 📋 [WASM LOG] [INFO] Result: 100 (at timestamp 1774925256365) wasm_log_level=INFO wasm_message=Result: 100 (at timestamp 1774925256365)
+    📋 [WASM LOG] [INFO] Result: 100 (at timestamp 1774925256365)
+2026-03-31T02:47:36.366198Z  INFO tokio-rt-worker mini_agent_wasm_session::tools::wasm: ⛽ Fuel consumed: 15668 / 1000000 units fuel_consumed=15668 fuel_remaining=984332 fuel_limit=1000000
+    ⛽ Fuel consumed: 15668 / 1000000 units
+2026-03-31T02:47:36.366238Z DEBUG tokio-rt-worker mini_agent_wasm_session::tools::wasm: WASM guest produced 2 log message(s) log_count=2
+2026-03-31T02:47:36.366263Z TRACE tokio-rt-worker mini_agent_wasm_session::tools::wasm: Guest log: [INFO] Calculating: 42 add 58 wasm_log_level=INFO wasm_log_msg=Calculating: 42 add 58
+2026-03-31T02:47:36.366288Z TRACE tokio-rt-worker mini_agent_wasm_session::tools::wasm: Guest log: [INFO] Result: 100 (at timestamp 1774925256365) wasm_log_level=INFO wasm_log_msg=Result: 100 (at timestamp 1774925256365)
+2026-03-31T02:47:36.366317Z  INFO tokio-rt-worker mini_agent_wasm_session::tools::wasm: ✅ WASM tool execution succeeded (74 chars output) output_len=74
+2026-03-31T02:47:36.366341Z DEBUG tokio-rt-worker mini_agent_wasm_session::tools::wasm: Full WASM tool output output={"expression":"42 + 58 = 100","result":100.0,"timestamp_ms":1774925256365}
+2026-03-31T02:47:36.366899Z  INFO            main process_user_input{user_input=What is 42 + 58?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::tools::wasm: WASM sandbox execution completed in 13ms elapsed_ms=13
+2026-03-31T02:47:36.367019Z  INFO            main process_user_input{user_input=What is 42 + 58?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::tools: ✅ Tool execution succeeded in 13ms tool=calculator elapsed_ms=13
+2026-03-31T02:47:36.367069Z TRACE            main process_user_input{user_input=What is 42 + 58?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::tools: Raw tool output tool=calculator raw_output={
+  "expression": "42 + 58 = 100",
+  "result": 100.0,
+  "timestamp_ms": 1774925256365
+}
+2026-03-31T02:47:36.367099Z DEBUG            main process_user_input{user_input=What is 42 + 58?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::tools: Serialized tool output (87 chars) tool=calculator serialized_len=87 serialized={
+  "expression": "42 + 58 = 100",
+  "result": 100.0,
+  "timestamp_ms": 1774925256365
+}
+2026-03-31T02:47:36.367129Z DEBUG            main process_user_input{user_input=What is 42 + 58?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::tools: Wrapping tool output in <tool_output> tags (114 chars) tool=calculator tool_call_id=call_94f22709182746f3a225c171 content_len=114
+2026-03-31T02:47:36.367149Z TRACE            main process_user_input{user_input=What is 42 + 58?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::tools: Full wrapped tool result tool=calculator wrapped_content=<tool_output>{
+  "expression": "42 + 58 = 100",
+  "result": 100.0,
+  "timestamp_ms": 1774925256365
+}</tool_output>
+2026-03-31T02:47:36.367167Z  INFO            main process_user_input{user_input=What is 42 + 58?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::tools: 📝 Creating tool result ChatMessage (role=Tool) tool=calculator tool_call_id=call_94f22709182746f3a225c171 is_error=false
+2026-03-31T02:47:36.367187Z  INFO            main process_user_input{user_input=What is 42 + 58?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: ✅ Tool 'calculator' succeeded in 13ms (87 chars output) tool=calculator elapsed_ms=13 output_len=87
+2026-03-31T02:47:36.367207Z DEBUG            main process_user_input{user_input=What is 42 + 58?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: Full tool output tool=calculator output={
+  "expression": "42 + 58 = 100",
+  "result": 100.0,
+  "timestamp_ms": 1774925256365
+}
+  ✅ Tool 'calculator' succeeded: {
+  "expression": "42 + 58 = 100",
+  "result": 100.0,
+  "timestamp_ms": 17749252...
+2026-03-31T02:47:36.367232Z DEBUG            main process_user_input{user_input=What is 42 + 58?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: Recording tool call for Turn history tool=calculator is_success=true
+2026-03-31T02:47:36.367252Z  INFO            main process_user_input{user_input=What is 42 + 58?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: 📝 Adding tool result for 'calculator' (call_id=call_94f22709182746f3a225c171) to conversation context
+2026-03-31T02:47:36.367270Z DEBUG            main process_user_input{user_input=What is 42 + 58?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: Context now has 4 messages (after adding tool result) message_count=4
+2026-03-31T02:47:36.367287Z  INFO            main process_user_input{user_input=What is 42 + 58?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: 🔄 All tools executed. Looping back to LLM with updated context (4 messages, 1 recorded tool calls) message_count=4 total_recorded=1
+2026-03-31T02:47:36.367308Z  INFO            main process_user_input{user_input=What is 42 + 58?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: ━━━ Iteration 2/10 ━━━ iteration=2 max=10 message_count=4 recorded_tool_calls=1
+
+--- Iteration 2/10 ---
+2026-03-31T02:47:36.367333Z  INFO            main process_user_input{user_input=What is 42 + 58?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: 📤 Step 1: Calling LLM...
+2026-03-31T02:47:36.367365Z DEBUG            main process_user_input{user_input=What is 42 + 58?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: Sending 4 messages and 1 tool definitions to LLM message_count=4 tool_count=1
+2026-03-31T02:47:36.367395Z TRACE            main process_user_input{user_input=What is 42 + 58?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: Message flow before LLM call messages_summary=[0]SYS → [1]USR → [2]AST → [3]TOL
+2026-03-31T02:47:36.367417Z  INFO            main process_user_input{user_input=What is 42 + 58?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: 📤 Preparing LLM API request url=http://api.haihub.cn/v1/chat/completions model=DeepSeek-V3-0324 message_count=4 tool_count=1
+2026-03-31T02:47:36.367578Z DEBUG            main process_user_input{user_input=What is 42 + 58?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: 📤 Full OpenAI API request body request_body={
+  "model": "DeepSeek-V3-0324",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a helpful assistant powered by the DeepSeek-V3-0324 model. You have access to a calculator tool. When the user asks a math question, use the calculator tool to compute the answer. For non-math questions, respond directly. You have conversation memory — you can reference previous turns in this thread. When asked about your identity, truthfully state that you are based on DeepSeek-V3-0324."
+    },
+    {
+      "role": "user",
+      "content": "What is 42 + 58?"
+    },
+    {
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_94f22709182746f3a225c171",
+          "type": "function",
+          "function": {
+            "name": "calculator",
+            "arguments": "{\"a\":42,\"b\":58,\"operation\":\"add\"}"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "content": "<tool_output>{\n  \"expression\": \"42 + 58 = 100\",\n  \"result\": 100.0,\n  \"timestamp_ms\": 1774925256365\n}</tool_output>",
+      "tool_call_id": "call_94f22709182746f3a225c171",
+      "name": "calculator"
+    }
+  ],
+  "tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "calculator",
+        "description": "A sandboxed calculator tool. Performs basic math operations (add, sub, mul, div) inside a WASM sandbox.",
+        "parameters": {
+          "properties": {
+            "a": {
+              "description": "First operand",
+              "type": "number"
+            },
+            "b": {
+              "description": "Second operand",
+              "type": "number"
+            },
+            "operation": {
+              "description": "Math operation: add, sub, mul, div",
+              "enum": [
+                "add",
+                "sub",
+                "mul",
+                "div"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "operation",
+            "a",
+            "b"
+          ],
+          "type": "object"
+        }
+      }
+    }
+  ],
+  "tool_choice": "auto"
+}
+2026-03-31T02:47:36.367605Z DEBUG            main process_user_input{user_input=What is 42 + 58?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: Request summary: 4 messages [system → user → assistant → tool], 1 tools model=DeepSeek-V3-0324 message_count=4 tool_count=1 tool_choice=Some("auto") messages_roles=system → user → assistant → tool
+2026-03-31T02:47:36.367628Z  INFO            main process_user_input{user_input=What is 42 + 58?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: 🌐 Sending HTTP POST to http://api.haihub.cn/v1/chat/completions...
+2026-03-31T02:47:36.637005Z  INFO            main process_user_input{user_input=What is 42 + 58?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: 📥 HTTP response received: 200 OK in 269ms status=200 OK elapsed_ms=269
+2026-03-31T02:47:36.637569Z DEBUG            main process_user_input{user_input=What is 42 + 58?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: 📥 Raw API response body (486 bytes) response_body={"id":"7ea2b6f0917449bda47d660a006d75c5","object":"chat.completion","created":1774925256,"model":"DeepSeek-V3-0324","choices":[{"index":0,"message":{"role":"assistant","content":"The result of \\(42 + 58\\) is \\(100\\).","reasoning_content":null,"tool_calls":null},"logprobs":null,"finish_reason":"stop","matched_stop":1}],"usage":{"prompt_tokens":419,"total_tokens":433,"completion_tokens":14,"prompt_tokens_details":null,"reasoning_tokens":0},"metadata":{"weight_version":"default"}} response_len=486
+2026-03-31T02:47:36.637895Z DEBUG            main process_user_input{user_input=What is 42 + 58?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: Parsed response: 1 choice(s) choice_count=1
+2026-03-31T02:47:36.638030Z DEBUG            main process_user_input{user_input=What is 42 + 58?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: Response choice: finish_reason=stop, has_content=true, has_tool_calls=false finish_reason=stop has_content=true has_tool_calls=false
+2026-03-31T02:47:36.638150Z  INFO            main process_user_input{user_input=What is 42 + 58?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: 💬 LLM returned text response (37 chars) text_len=37
+2026-03-31T02:47:36.638229Z DEBUG            main process_user_input{user_input=What is 42 + 58?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: Full LLM text response text=The result of \(42 + 58\) is \(100\).
+2026-03-31T02:47:36.638341Z  INFO            main process_user_input{user_input=What is 42 + 58?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: 📥 LLM responded in 270ms (finish_reason=Stop) elapsed_ms=270 finish_reason=Stop
+2026-03-31T02:47:36.638432Z  INFO            main process_user_input{user_input=What is 42 + 58?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: 💬 LLM returned TEXT response (37 chars, 1 tool calls recorded) text_len=37 total_tool_calls=1
+2026-03-31T02:47:36.638511Z DEBUG            main process_user_input{user_input=What is 42 + 58?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: Full text response from LLM text=The result of \(42 + 58\) is \(100\).
+  💬 LLM returned text: The result of \(42 + 58\) is \(100\).
+2026-03-31T02:47:36.638664Z  INFO            main process_user_input{user_input=What is 42 + 58?}: mini_agent_wasm_session::agent: Agentic loop completed in 1028ms elapsed_ms=1028 is_ok=true
+2026-03-31T02:47:36.638741Z  INFO            main process_user_input{user_input=What is 42 + 58?}: mini_agent_wasm_session::agent: ✅ Turn completed with response (37 chars, 1 tool calls) response_len=37 tool_call_count=1
+2026-03-31T02:47:36.638827Z DEBUG            main process_user_input{user_input=What is 42 + 58?}: mini_agent_wasm_session::session: Recording tool call 'calculator' in Turn #0 turn=0 tool_name=calculator
+2026-03-31T02:47:36.638902Z DEBUG            main process_user_input{user_input=What is 42 + 58?}: mini_agent_wasm_session::session: Recording tool result for 'calculator' in Turn #0 turn=0 tool_name=calculator
+2026-03-31T02:47:36.638986Z  INFO            main process_user_input{user_input=What is 42 + 58?}: mini_agent_wasm_session::session: Completing Turn #0 in thread thread_id=a61a8f7f turn=0
+2026-03-31T02:47:36.639059Z  INFO            main process_user_input{user_input=What is 42 + 58?}: mini_agent_wasm_session::session: ✅ Turn #0 completed (37 chars response, 1 tool calls) turn=0 response_len=37 tool_call_count=1
+2026-03-31T02:47:36.639141Z DEBUG            main process_user_input{user_input=What is 42 + 58?}: mini_agent_wasm_session::agent: Turn recorded and completed in thread turn_count=1 thread_id=a61a8f7f
+2026-03-31T02:47:36.639239Z  INFO            main mini_agent_wasm_session::commands: ✅ Agent responded (37 chars) response_len=37
+
+🤖 Agent: The result of \(42 + 58\) is \(100\).
+
+🧑 [T2:a61a] You: 2026-03-31T02:47:36.639414Z  INFO            main mini_agent_wasm_session: 📝 User input received input=Now multiply that result by 3
+2026-03-31T02:47:36.639457Z DEBUG            main mini_agent_wasm_session: Building system prompt for current model system_prompt_model=DeepSeek-V3-0324
+2026-03-31T02:47:36.639481Z  INFO            main mini_agent_wasm_session::commands: 🤖 Processing user input through Session pipeline input=Now multiply that result by 3
+
+🤖 Agent thinking...
+2026-03-31T02:47:36.639534Z  INFO            main process_user_input{user_input=Now multiply that result by 3}: mini_agent_wasm_session::agent: 📋 Processing user input in thread thread_id=a61a8f7f existing_turns=1
+2026-03-31T02:47:36.639577Z  INFO            main process_user_input{user_input=Now multiply that result by 3}: mini_agent_wasm_session::session: 📝 Starting Turn #1 in thread thread_id=a61a8f7f turn_number=1 user_input=Now multiply that result by 3
+2026-03-31T02:47:36.639610Z DEBUG            main process_user_input{user_input=Now multiply that result by 3}: mini_agent_wasm_session::session: Creating new Turn #1 turn_number=1 user_input=Now multiply that result by 3
+2026-03-31T02:47:36.639643Z  INFO            main process_user_input{user_input=Now multiply that result by 3}: mini_agent_wasm_session::agent: 📝 Turn #2 started turn_number=2 thread_id=a61a8f7f
+  📝 Turn #2 started in thread a61a8f7f
+2026-03-31T02:47:36.639686Z DEBUG            main process_user_input{user_input=Now multiply that result by 3}: mini_agent_wasm_session::session: 🔄 Rebuilding ChatMessage history from 2 turns thread_id=a61a8f7f turn_count=2
+2026-03-31T02:47:36.639722Z TRACE            main process_user_input{user_input=Now multiply that result by 3}: mini_agent_wasm_session::session: Added user message for Turn #0 turn=0
+2026-03-31T02:47:36.639754Z DEBUG            main process_user_input{user_input=Now multiply that result by 3}: mini_agent_wasm_session::session: Turn #0 has 1 tool call(s) to replay turn=0 tool_call_count=1
+2026-03-31T02:47:36.639808Z TRACE            main process_user_input{user_input=Now multiply that result by 3}: mini_agent_wasm_session::session: Added assistant response for Turn #0 turn=0
+2026-03-31T02:47:36.639839Z TRACE            main process_user_input{user_input=Now multiply that result by 3}: mini_agent_wasm_session::session: Added user message for Turn #1 turn=1
+2026-03-31T02:47:36.639868Z  INFO            main process_user_input{user_input=Now multiply that result by 3}: mini_agent_wasm_session::session: 📨 Rebuilt 5 messages from 2 turns thread_id=a61a8f7f total_messages=5 turn_count=2
+2026-03-31T02:47:36.639907Z  INFO            main process_user_input{user_input=Now multiply that result by 3}: mini_agent_wasm_session::agent: 📨 Context rebuilt: 6 messages (1 system + 5 from 2 turns) total_messages=6 history_messages=5 turn_count=2
+2026-03-31T02:47:36.639953Z DEBUG            main process_user_input{user_input=Now multiply that result by 3}: mini_agent_wasm_session::agent: Message role sequence messages_roles=SYS → USR → AST → TOL → AST → USR
+  📨 Context: 6 messages (from 2 turns)
+2026-03-31T02:47:36.639986Z  INFO            main process_user_input{user_input=Now multiply that result by 3}: mini_agent_wasm_session::agent: 🔄 Launching agentic loop...
+2026-03-31T02:47:36.640064Z  INFO            main process_user_input{user_input=Now multiply that result by 3}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: 🔄 Entering agentic loop tool_count=1 tools=["calculator"] initial_message_count=6
+2026-03-31T02:47:36.640106Z  INFO            main process_user_input{user_input=Now multiply that result by 3}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: ━━━ Iteration 1/10 ━━━ iteration=1 max=10 message_count=6 recorded_tool_calls=0
+
+--- Iteration 1/10 ---
+2026-03-31T02:47:36.640163Z  INFO            main process_user_input{user_input=Now multiply that result by 3}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: 📤 Step 1: Calling LLM...
+2026-03-31T02:47:36.640218Z DEBUG            main process_user_input{user_input=Now multiply that result by 3}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: Sending 6 messages and 1 tool definitions to LLM message_count=6 tool_count=1
+2026-03-31T02:47:36.640274Z TRACE            main process_user_input{user_input=Now multiply that result by 3}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: Message flow before LLM call messages_summary=[0]SYS → [1]USR → [2]AST → [3]TOL → [4]AST → [5]USR
+2026-03-31T02:47:36.640312Z  INFO            main process_user_input{user_input=Now multiply that result by 3}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: 📤 Preparing LLM API request url=http://api.haihub.cn/v1/chat/completions model=DeepSeek-V3-0324 message_count=6 tool_count=1
+2026-03-31T02:47:36.640682Z DEBUG            main process_user_input{user_input=Now multiply that result by 3}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: 📤 Full OpenAI API request body request_body={
+  "model": "DeepSeek-V3-0324",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a helpful assistant powered by the DeepSeek-V3-0324 model. You have access to a calculator tool. When the user asks a math question, use the calculator tool to compute the answer. For non-math questions, respond directly. You have conversation memory — you can reference previous turns in this thread. When asked about your identity, truthfully state that you are based on DeepSeek-V3-0324."
+    },
+    {
+      "role": "user",
+      "content": "What is 42 + 58?"
+    },
+    {
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_0_0",
+          "type": "function",
+          "function": {
+            "name": "calculator",
+            "arguments": "{\"a\":42,\"b\":58,\"operation\":\"add\"}"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "content": "{\n  \"expression\": \"42 + 58 = 100\",\n  \"result\": 100.0,\n  \"timestamp_ms\": 1774925256365\n}",
+      "tool_call_id": "call_0_0",
+      "name": "calculator"
+    },
+    {
+      "role": "assistant",
+      "content": "The result of \\(42 + 58\\) is \\(100\\)."
+    },
+    {
+      "role": "user",
+      "content": "Now multiply that result by 3"
+    }
+  ],
+  "tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "calculator",
+        "description": "A sandboxed calculator tool. Performs basic math operations (add, sub, mul, div) inside a WASM sandbox.",
+        "parameters": {
+          "properties": {
+            "a": {
+              "description": "First operand",
+              "type": "number"
+            },
+            "b": {
+              "description": "Second operand",
+              "type": "number"
+            },
+            "operation": {
+              "description": "Math operation: add, sub, mul, div",
+              "enum": [
+                "add",
+                "sub",
+                "mul",
+                "div"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "operation",
+            "a",
+            "b"
+          ],
+          "type": "object"
+        }
+      }
+    }
+  ],
+  "tool_choice": "auto"
+}
+2026-03-31T02:47:36.640723Z DEBUG            main process_user_input{user_input=Now multiply that result by 3}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: Request summary: 6 messages [system → user → assistant → tool → assistant → user], 1 tools model=DeepSeek-V3-0324 message_count=6 tool_count=1 tool_choice=Some("auto") messages_roles=system → user → assistant → tool → assistant → user
+2026-03-31T02:47:36.640756Z  INFO            main process_user_input{user_input=Now multiply that result by 3}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: 🌐 Sending HTTP POST to http://api.haihub.cn/v1/chat/completions...
+2026-03-31T02:47:37.009480Z  INFO            main process_user_input{user_input=Now multiply that result by 3}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: 📥 HTTP response received: 200 OK in 368ms status=200 OK elapsed_ms=368
+2026-03-31T02:47:37.009956Z DEBUG            main process_user_input{user_input=Now multiply that result by 3}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: 📥 Raw API response body (615 bytes) response_body={"id":"99fd1c00c15b48df9441d25d1c3b99af","object":"chat.completion","created":1774925257,"model":"DeepSeek-V3-0324","choices":[{"index":0,"message":{"role":"assistant","content":null,"reasoning_content":null,"tool_calls":[{"id":"call_450cf2936e0746cea83418db","index":-1,"type":"function","function":{"name":"calculator","arguments":"{\"a\": 100, \"b\": 3, \"operation\": \"mul\"}"}}]},"logprobs":null,"finish_reason":"tool_calls","matched_stop":null}],"usage":{"prompt_tokens":434,"total_tokens":460,"completion_tokens":26,"prompt_tokens_details":null,"reasoning_tokens":0},"metadata":{"weight_version":"default"}} response_len=615
+2026-03-31T02:47:37.010226Z DEBUG            main process_user_input{user_input=Now multiply that result by 3}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: Parsed response: 1 choice(s) choice_count=1
+2026-03-31T02:47:37.010291Z DEBUG            main process_user_input{user_input=Now multiply that result by 3}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: Response choice: finish_reason=tool_calls, has_content=false, has_tool_calls=true finish_reason=tool_calls has_content=false has_tool_calls=true
+2026-03-31T02:47:37.010360Z  INFO            main process_user_input{user_input=Now multiply that result by 3}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: 🔧 LLM requested 1 tool call(s) tool_call_count=1
+2026-03-31T02:47:37.010415Z DEBUG            main process_user_input{user_input=Now multiply that result by 3}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: Parsing tool call [0]: calculator (id=call_450cf2936e0746cea83418db) index=0 id=call_450cf2936e0746cea83418db function_name=calculator raw_arguments={"a": 100, "b": 3, "operation": "mul"}
+2026-03-31T02:47:37.010530Z TRACE            main process_user_input{user_input=Now multiply that result by 3}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: Parsed tool arguments for 'calculator' parsed_arguments={
+  "a": 100,
+  "b": 3,
+  "operation": "mul"
+}
+2026-03-31T02:47:37.010619Z  INFO            main process_user_input{user_input=Now multiply that result by 3}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: 📥 LLM responded in 370ms (finish_reason=ToolUse) elapsed_ms=370 finish_reason=ToolUse
+2026-03-31T02:47:37.010679Z  INFO            main process_user_input{user_input=Now multiply that result by 3}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: 🔧 LLM returned TOOL CALLS (1 tool(s)) tool_call_count=1 has_content=false
+2026-03-31T02:47:37.010742Z DEBUG            main process_user_input{user_input=Now multiply that result by 3}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: Tool call [0]: calculator (id=call_450cf2936e0746cea83418db) index=0 tool_name=calculator tool_call_id=call_450cf2936e0746cea83418db arguments={
+  "a": 100,
+  "b": 3,
+  "operation": "mul"
+}
+  🔧 LLM wants to call 1 tool(s)
+2026-03-31T02:47:37.010796Z  INFO            main process_user_input{user_input=Now multiply that result by 3}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: 📝 Adding assistant message with tool calls to conversation context
+2026-03-31T02:47:37.010843Z DEBUG            main process_user_input{user_input=Now multiply that result by 3}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: Context now has 7 messages (after adding assistant tool call message) message_count=7
+2026-03-31T02:47:37.010881Z  INFO            main process_user_input{user_input=Now multiply that result by 3}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: ⚙️  Executing tool [1/1]: calculator index=0 tool=calculator
+2026-03-31T02:47:37.010969Z DEBUG            main process_user_input{user_input=Now multiply that result by 3}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: Tool execution input tool_name=calculator tool_call_id=call_450cf2936e0746cea83418db arguments={
+  "a": 100,
+  "b": 3,
+  "operation": "mul"
+}
+2026-03-31T02:47:37.011010Z  INFO            main process_user_input{user_input=Now multiply that result by 3}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::tools: 🔍 Looking up tool in registry tool=calculator
+2026-03-31T02:47:37.011055Z DEBUG            main process_user_input{user_input=Now multiply that result by 3}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::tools: Tool found, preparing execution tool=calculator params={
+  "a": 100,
+  "b": 3,
+  "operation": "mul"
+}
+  ⚙️  Executing tool: calculator with params: {"a":100,"b":3,"operation":"mul"}
+2026-03-31T02:47:37.011111Z  INFO            main process_user_input{user_input=Now multiply that result by 3}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::tools: ⏱️  Executing tool with 30s timeout tool=calculator timeout_secs=30
+2026-03-31T02:47:37.011166Z  INFO            main process_user_input{user_input=Now multiply that result by 3}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::tools::wasm: 🔧 WasmTool::execute() — dispatching to WASM sandbox tool=calculator params={"a":100,"b":3,"operation":"mul"}
+2026-03-31T02:47:37.011257Z  INFO tokio-rt-worker mini_agent_wasm_session::tools::wasm: 🏖️  Executing tool in WASM sandbox tool=calculator params={"a":100,"b":3,"operation":"mul"} fuel_limit=1000000
+2026-03-31T02:47:37.013175Z DEBUG tokio-rt-worker mini_agent_wasm_session::tools::wasm: Instantiating WASM guest in sandbox...
+2026-03-31T02:47:37.014163Z  INFO tokio-rt-worker mini_agent_wasm_session::tools::wasm: 📤 Calling WASM guest execute() function
+2026-03-31T02:47:37.014358Z  INFO tokio-rt-worker mini_agent_wasm_session::tools::wasm: 📋 [WASM LOG] [INFO] Calculating: 100 mul 3 wasm_log_level=INFO wasm_message=Calculating: 100 mul 3
+    📋 [WASM LOG] [INFO] Calculating: 100 mul 3
+2026-03-31T02:47:37.014426Z TRACE tokio-rt-worker mini_agent_wasm_session::tools::wasm: WASM guest called now_millis() millis=1774925257014
+2026-03-31T02:47:37.014473Z  INFO tokio-rt-worker mini_agent_wasm_session::tools::wasm: 📋 [WASM LOG] [INFO] Result: 300 (at timestamp 1774925257014) wasm_log_level=INFO wasm_message=Result: 300 (at timestamp 1774925257014)
+    📋 [WASM LOG] [INFO] Result: 300 (at timestamp 1774925257014)
+2026-03-31T02:47:37.014613Z  INFO tokio-rt-worker mini_agent_wasm_session::tools::wasm: ⛽ Fuel consumed: 15640 / 1000000 units fuel_consumed=15640 fuel_remaining=984360 fuel_limit=1000000
+    ⛽ Fuel consumed: 15640 / 1000000 units
+2026-03-31T02:47:37.014652Z DEBUG tokio-rt-worker mini_agent_wasm_session::tools::wasm: WASM guest produced 2 log message(s) log_count=2
+2026-03-31T02:47:37.014673Z TRACE tokio-rt-worker mini_agent_wasm_session::tools::wasm: Guest log: [INFO] Calculating: 100 mul 3 wasm_log_level=INFO wasm_log_msg=Calculating: 100 mul 3
+2026-03-31T02:47:37.014697Z TRACE tokio-rt-worker mini_agent_wasm_session::tools::wasm: Guest log: [INFO] Result: 300 (at timestamp 1774925257014) wasm_log_level=INFO wasm_log_msg=Result: 300 (at timestamp 1774925257014)
+2026-03-31T02:47:37.014723Z  INFO tokio-rt-worker mini_agent_wasm_session::tools::wasm: ✅ WASM tool execution succeeded (75 chars output) output_len=75
+2026-03-31T02:47:37.014745Z DEBUG tokio-rt-worker mini_agent_wasm_session::tools::wasm: Full WASM tool output output={"expression":"100 × 3 = 300","result":300.0,"timestamp_ms":1774925257014}
+2026-03-31T02:47:37.015164Z  INFO            main process_user_input{user_input=Now multiply that result by 3}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::tools::wasm: WASM sandbox execution completed in 3ms elapsed_ms=3
+2026-03-31T02:47:37.015282Z  INFO            main process_user_input{user_input=Now multiply that result by 3}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::tools: ✅ Tool execution succeeded in 4ms tool=calculator elapsed_ms=4
+2026-03-31T02:47:37.015403Z TRACE            main process_user_input{user_input=Now multiply that result by 3}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::tools: Raw tool output tool=calculator raw_output={
+  "expression": "100 × 3 = 300",
+  "result": 300.0,
+  "timestamp_ms": 1774925257014
+}
+2026-03-31T02:47:37.015457Z DEBUG            main process_user_input{user_input=Now multiply that result by 3}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::tools: Serialized tool output (88 chars) tool=calculator serialized_len=88 serialized={
+  "expression": "100 × 3 = 300",
+  "result": 300.0,
+  "timestamp_ms": 1774925257014
+}
+2026-03-31T02:47:37.015506Z DEBUG            main process_user_input{user_input=Now multiply that result by 3}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::tools: Wrapping tool output in <tool_output> tags (115 chars) tool=calculator tool_call_id=call_450cf2936e0746cea83418db content_len=115
+2026-03-31T02:47:37.015560Z TRACE            main process_user_input{user_input=Now multiply that result by 3}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::tools: Full wrapped tool result tool=calculator wrapped_content=<tool_output>{
+  "expression": "100 × 3 = 300",
+  "result": 300.0,
+  "timestamp_ms": 1774925257014
+}</tool_output>
+2026-03-31T02:47:37.015602Z  INFO            main process_user_input{user_input=Now multiply that result by 3}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::tools: 📝 Creating tool result ChatMessage (role=Tool) tool=calculator tool_call_id=call_450cf2936e0746cea83418db is_error=false
+2026-03-31T02:47:37.015628Z  INFO            main process_user_input{user_input=Now multiply that result by 3}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: ✅ Tool 'calculator' succeeded in 4ms (88 chars output) tool=calculator elapsed_ms=4 output_len=88
+2026-03-31T02:47:37.015654Z DEBUG            main process_user_input{user_input=Now multiply that result by 3}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: Full tool output tool=calculator output={
+  "expression": "100 × 3 = 300",
+  "result": 300.0,
+  "timestamp_ms": 1774925257014
+}
+  ✅ Tool 'calculator' succeeded: {
+  "expression": "100 × 3 = 300",
+  "result": 300.0,
+  "timestamp_ms": 1774925...
+2026-03-31T02:47:37.015687Z DEBUG            main process_user_input{user_input=Now multiply that result by 3}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: Recording tool call for Turn history tool=calculator is_success=true
+2026-03-31T02:47:37.015712Z  INFO            main process_user_input{user_input=Now multiply that result by 3}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: 📝 Adding tool result for 'calculator' (call_id=call_450cf2936e0746cea83418db) to conversation context
+2026-03-31T02:47:37.015735Z DEBUG            main process_user_input{user_input=Now multiply that result by 3}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: Context now has 8 messages (after adding tool result) message_count=8
+2026-03-31T02:47:37.015757Z  INFO            main process_user_input{user_input=Now multiply that result by 3}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: 🔄 All tools executed. Looping back to LLM with updated context (8 messages, 1 recorded tool calls) message_count=8 total_recorded=1
+2026-03-31T02:47:37.015784Z  INFO            main process_user_input{user_input=Now multiply that result by 3}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: ━━━ Iteration 2/10 ━━━ iteration=2 max=10 message_count=8 recorded_tool_calls=1
+
+--- Iteration 2/10 ---
+2026-03-31T02:47:37.015811Z  INFO            main process_user_input{user_input=Now multiply that result by 3}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: 📤 Step 1: Calling LLM...
+2026-03-31T02:47:37.015828Z DEBUG            main process_user_input{user_input=Now multiply that result by 3}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: Sending 8 messages and 1 tool definitions to LLM message_count=8 tool_count=1
+2026-03-31T02:47:37.015888Z TRACE            main process_user_input{user_input=Now multiply that result by 3}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: Message flow before LLM call messages_summary=[0]SYS → [1]USR → [2]AST → [3]TOL → [4]AST → [5]USR → [6]AST → [7]TOL
+2026-03-31T02:47:37.015915Z  INFO            main process_user_input{user_input=Now multiply that result by 3}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: 📤 Preparing LLM API request url=http://api.haihub.cn/v1/chat/completions model=DeepSeek-V3-0324 message_count=8 tool_count=1
+2026-03-31T02:47:37.016216Z DEBUG            main process_user_input{user_input=Now multiply that result by 3}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: 📤 Full OpenAI API request body request_body={
+  "model": "DeepSeek-V3-0324",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a helpful assistant powered by the DeepSeek-V3-0324 model. You have access to a calculator tool. When the user asks a math question, use the calculator tool to compute the answer. For non-math questions, respond directly. You have conversation memory — you can reference previous turns in this thread. When asked about your identity, truthfully state that you are based on DeepSeek-V3-0324."
+    },
+    {
+      "role": "user",
+      "content": "What is 42 + 58?"
+    },
+    {
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_0_0",
+          "type": "function",
+          "function": {
+            "name": "calculator",
+            "arguments": "{\"a\":42,\"b\":58,\"operation\":\"add\"}"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "content": "{\n  \"expression\": \"42 + 58 = 100\",\n  \"result\": 100.0,\n  \"timestamp_ms\": 1774925256365\n}",
+      "tool_call_id": "call_0_0",
+      "name": "calculator"
+    },
+    {
+      "role": "assistant",
+      "content": "The result of \\(42 + 58\\) is \\(100\\)."
+    },
+    {
+      "role": "user",
+      "content": "Now multiply that result by 3"
+    },
+    {
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_450cf2936e0746cea83418db",
+          "type": "function",
+          "function": {
+            "name": "calculator",
+            "arguments": "{\"a\":100,\"b\":3,\"operation\":\"mul\"}"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "content": "<tool_output>{\n  \"expression\": \"100 × 3 = 300\",\n  \"result\": 300.0,\n  \"timestamp_ms\": 1774925257014\n}</tool_output>",
+      "tool_call_id": "call_450cf2936e0746cea83418db",
+      "name": "calculator"
+    }
+  ],
+  "tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "calculator",
+        "description": "A sandboxed calculator tool. Performs basic math operations (add, sub, mul, div) inside a WASM sandbox.",
+        "parameters": {
+          "properties": {
+            "a": {
+              "description": "First operand",
+              "type": "number"
+            },
+            "b": {
+              "description": "Second operand",
+              "type": "number"
+            },
+            "operation": {
+              "description": "Math operation: add, sub, mul, div",
+              "enum": [
+                "add",
+                "sub",
+                "mul",
+                "div"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "operation",
+            "a",
+            "b"
+          ],
+          "type": "object"
+        }
+      }
+    }
+  ],
+  "tool_choice": "auto"
+}
+2026-03-31T02:47:37.016273Z DEBUG            main process_user_input{user_input=Now multiply that result by 3}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: Request summary: 8 messages [system → user → assistant → tool → assistant → user → assistant → tool], 1 tools model=DeepSeek-V3-0324 message_count=8 tool_count=1 tool_choice=Some("auto") messages_roles=system → user → assistant → tool → assistant → user → assistant → tool
+2026-03-31T02:47:37.016317Z  INFO            main process_user_input{user_input=Now multiply that result by 3}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: 🌐 Sending HTTP POST to http://api.haihub.cn/v1/chat/completions...
+2026-03-31T02:47:37.286269Z  INFO            main process_user_input{user_input=Now multiply that result by 3}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: 📥 HTTP response received: 200 OK in 269ms status=200 OK elapsed_ms=269
+2026-03-31T02:47:37.286586Z DEBUG            main process_user_input{user_input=Now multiply that result by 3}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: 📥 Raw API response body (492 bytes) response_body={"id":"eba34edba3f9486ab55e73f21b1fdbad","object":"chat.completion","created":1774925257,"model":"DeepSeek-V3-0324","choices":[{"index":0,"message":{"role":"assistant","content":"The result of \\(100 \\times 3\\) is \\(300\\).","reasoning_content":null,"tool_calls":null},"logprobs":null,"finish_reason":"stop","matched_stop":1}],"usage":{"prompt_tokens":531,"total_tokens":546,"completion_tokens":15,"prompt_tokens_details":null,"reasoning_tokens":0},"metadata":{"weight_version":"default"}} response_len=492
+2026-03-31T02:47:37.286707Z DEBUG            main process_user_input{user_input=Now multiply that result by 3}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: Parsed response: 1 choice(s) choice_count=1
+2026-03-31T02:47:37.286741Z DEBUG            main process_user_input{user_input=Now multiply that result by 3}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: Response choice: finish_reason=stop, has_content=true, has_tool_calls=false finish_reason=stop has_content=true has_tool_calls=false
+2026-03-31T02:47:37.286777Z  INFO            main process_user_input{user_input=Now multiply that result by 3}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: 💬 LLM returned text response (42 chars) text_len=42
+2026-03-31T02:47:37.286801Z DEBUG            main process_user_input{user_input=Now multiply that result by 3}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: Full LLM text response text=The result of \(100 \times 3\) is \(300\).
+2026-03-31T02:47:37.286849Z  INFO            main process_user_input{user_input=Now multiply that result by 3}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: 📥 LLM responded in 270ms (finish_reason=Stop) elapsed_ms=270 finish_reason=Stop
+2026-03-31T02:47:37.286880Z  INFO            main process_user_input{user_input=Now multiply that result by 3}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: 💬 LLM returned TEXT response (42 chars, 1 tool calls recorded) text_len=42 total_tool_calls=1
+2026-03-31T02:47:37.286908Z DEBUG            main process_user_input{user_input=Now multiply that result by 3}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: Full text response from LLM text=The result of \(100 \times 3\) is \(300\).
+  💬 LLM returned text: The result of \(100 \times 3\) is \(300\).
+2026-03-31T02:47:37.286976Z  INFO            main process_user_input{user_input=Now multiply that result by 3}: mini_agent_wasm_session::agent: Agentic loop completed in 646ms elapsed_ms=646 is_ok=true
+2026-03-31T02:47:37.287008Z  INFO            main process_user_input{user_input=Now multiply that result by 3}: mini_agent_wasm_session::agent: ✅ Turn completed with response (42 chars, 1 tool calls) response_len=42 tool_call_count=1
+2026-03-31T02:47:37.287040Z DEBUG            main process_user_input{user_input=Now multiply that result by 3}: mini_agent_wasm_session::session: Recording tool call 'calculator' in Turn #1 turn=1 tool_name=calculator
+2026-03-31T02:47:37.287065Z DEBUG            main process_user_input{user_input=Now multiply that result by 3}: mini_agent_wasm_session::session: Recording tool result for 'calculator' in Turn #1 turn=1 tool_name=calculator
+2026-03-31T02:47:37.287135Z  INFO            main process_user_input{user_input=Now multiply that result by 3}: mini_agent_wasm_session::session: Completing Turn #1 in thread thread_id=a61a8f7f turn=1
+2026-03-31T02:47:37.287158Z  INFO            main process_user_input{user_input=Now multiply that result by 3}: mini_agent_wasm_session::session: ✅ Turn #1 completed (42 chars response, 1 tool calls) turn=1 response_len=42 tool_call_count=1
+2026-03-31T02:47:37.287188Z DEBUG            main process_user_input{user_input=Now multiply that result by 3}: mini_agent_wasm_session::agent: Turn recorded and completed in thread turn_count=2 thread_id=a61a8f7f
+2026-03-31T02:47:37.287228Z  INFO            main mini_agent_wasm_session::commands: ✅ Agent responded (42 chars) response_len=42
+
+🤖 Agent: The result of \(100 \times 3\) is \(300\).
+
+🧑 [T3:a61a] You: 2026-03-31T02:47:37.287278Z  INFO            main mini_agent_wasm_session: 📝 User input received input=What was my first question?
+2026-03-31T02:47:37.287295Z DEBUG            main mini_agent_wasm_session: Building system prompt for current model system_prompt_model=DeepSeek-V3-0324
+2026-03-31T02:47:37.287314Z  INFO            main mini_agent_wasm_session::commands: 🤖 Processing user input through Session pipeline input=What was my first question?
+
+🤖 Agent thinking...
+2026-03-31T02:47:37.287358Z  INFO            main process_user_input{user_input=What was my first question?}: mini_agent_wasm_session::agent: 📋 Processing user input in thread thread_id=a61a8f7f existing_turns=2
+2026-03-31T02:47:37.287383Z  INFO            main process_user_input{user_input=What was my first question?}: mini_agent_wasm_session::session: 📝 Starting Turn #2 in thread thread_id=a61a8f7f turn_number=2 user_input=What was my first question?
+2026-03-31T02:47:37.287404Z DEBUG            main process_user_input{user_input=What was my first question?}: mini_agent_wasm_session::session: Creating new Turn #2 turn_number=2 user_input=What was my first question?
+2026-03-31T02:47:37.287427Z  INFO            main process_user_input{user_input=What was my first question?}: mini_agent_wasm_session::agent: 📝 Turn #3 started turn_number=3 thread_id=a61a8f7f
+  📝 Turn #3 started in thread a61a8f7f
+2026-03-31T02:47:37.287456Z DEBUG            main process_user_input{user_input=What was my first question?}: mini_agent_wasm_session::session: 🔄 Rebuilding ChatMessage history from 3 turns thread_id=a61a8f7f turn_count=3
+2026-03-31T02:47:37.287482Z TRACE            main process_user_input{user_input=What was my first question?}: mini_agent_wasm_session::session: Added user message for Turn #0 turn=0
+2026-03-31T02:47:37.287502Z DEBUG            main process_user_input{user_input=What was my first question?}: mini_agent_wasm_session::session: Turn #0 has 1 tool call(s) to replay turn=0 tool_call_count=1
+2026-03-31T02:47:37.287540Z TRACE            main process_user_input{user_input=What was my first question?}: mini_agent_wasm_session::session: Added assistant response for Turn #0 turn=0
+2026-03-31T02:47:37.287561Z TRACE            main process_user_input{user_input=What was my first question?}: mini_agent_wasm_session::session: Added user message for Turn #1 turn=1
+2026-03-31T02:47:37.287578Z DEBUG            main process_user_input{user_input=What was my first question?}: mini_agent_wasm_session::session: Turn #1 has 1 tool call(s) to replay turn=1 tool_call_count=1
+2026-03-31T02:47:37.287601Z TRACE            main process_user_input{user_input=What was my first question?}: mini_agent_wasm_session::session: Added assistant response for Turn #1 turn=1
+2026-03-31T02:47:37.287620Z TRACE            main process_user_input{user_input=What was my first question?}: mini_agent_wasm_session::session: Added user message for Turn #2 turn=2
+2026-03-31T02:47:37.287640Z  INFO            main process_user_input{user_input=What was my first question?}: mini_agent_wasm_session::session: 📨 Rebuilt 9 messages from 3 turns thread_id=a61a8f7f total_messages=9 turn_count=3
+2026-03-31T02:47:37.287686Z  INFO            main process_user_input{user_input=What was my first question?}: mini_agent_wasm_session::agent: 📨 Context rebuilt: 10 messages (1 system + 9 from 3 turns) total_messages=10 history_messages=9 turn_count=3
+2026-03-31T02:47:37.287724Z DEBUG            main process_user_input{user_input=What was my first question?}: mini_agent_wasm_session::agent: Message role sequence messages_roles=SYS → USR → AST → TOL → AST → USR → AST → TOL → AST → USR
+  📨 Context: 10 messages (from 3 turns)
+2026-03-31T02:47:37.287747Z  INFO            main process_user_input{user_input=What was my first question?}: mini_agent_wasm_session::agent: 🔄 Launching agentic loop...
+2026-03-31T02:47:37.287798Z  INFO            main process_user_input{user_input=What was my first question?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: 🔄 Entering agentic loop tool_count=1 tools=["calculator"] initial_message_count=10
+2026-03-31T02:47:37.287830Z  INFO            main process_user_input{user_input=What was my first question?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: ━━━ Iteration 1/10 ━━━ iteration=1 max=10 message_count=10 recorded_tool_calls=0
+
+--- Iteration 1/10 ---
+2026-03-31T02:47:37.287863Z  INFO            main process_user_input{user_input=What was my first question?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: 📤 Step 1: Calling LLM...
+2026-03-31T02:47:37.287883Z DEBUG            main process_user_input{user_input=What was my first question?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: Sending 10 messages and 1 tool definitions to LLM message_count=10 tool_count=1
+2026-03-31T02:47:37.287924Z TRACE            main process_user_input{user_input=What was my first question?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: Message flow before LLM call messages_summary=[0]SYS → [1]USR → [2]AST → [3]TOL → [4]AST → [5]USR → [6]AST → [7]TOL → [8]AST → [9]USR
+2026-03-31T02:47:37.287951Z  INFO            main process_user_input{user_input=What was my first question?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: 📤 Preparing LLM API request url=http://api.haihub.cn/v1/chat/completions model=DeepSeek-V3-0324 message_count=10 tool_count=1
+2026-03-31T02:47:37.288267Z DEBUG            main process_user_input{user_input=What was my first question?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: 📤 Full OpenAI API request body request_body={
+  "model": "DeepSeek-V3-0324",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a helpful assistant powered by the DeepSeek-V3-0324 model. You have access to a calculator tool. When the user asks a math question, use the calculator tool to compute the answer. For non-math questions, respond directly. You have conversation memory — you can reference previous turns in this thread. When asked about your identity, truthfully state that you are based on DeepSeek-V3-0324."
+    },
+    {
+      "role": "user",
+      "content": "What is 42 + 58?"
+    },
+    {
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_0_0",
+          "type": "function",
+          "function": {
+            "name": "calculator",
+            "arguments": "{\"a\":42,\"b\":58,\"operation\":\"add\"}"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "content": "{\n  \"expression\": \"42 + 58 = 100\",\n  \"result\": 100.0,\n  \"timestamp_ms\": 1774925256365\n}",
+      "tool_call_id": "call_0_0",
+      "name": "calculator"
+    },
+    {
+      "role": "assistant",
+      "content": "The result of \\(42 + 58\\) is \\(100\\)."
+    },
+    {
+      "role": "user",
+      "content": "Now multiply that result by 3"
+    },
+    {
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_1_0",
+          "type": "function",
+          "function": {
+            "name": "calculator",
+            "arguments": "{\"a\":100,\"b\":3,\"operation\":\"mul\"}"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "content": "{\n  \"expression\": \"100 × 3 = 300\",\n  \"result\": 300.0,\n  \"timestamp_ms\": 1774925257014\n}",
+      "tool_call_id": "call_1_0",
+      "name": "calculator"
+    },
+    {
+      "role": "assistant",
+      "content": "The result of \\(100 \\times 3\\) is \\(300\\)."
+    },
+    {
+      "role": "user",
+      "content": "What was my first question?"
+    }
+  ],
+  "tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "calculator",
+        "description": "A sandboxed calculator tool. Performs basic math operations (add, sub, mul, div) inside a WASM sandbox.",
+        "parameters": {
+          "properties": {
+            "a": {
+              "description": "First operand",
+              "type": "number"
+            },
+            "b": {
+              "description": "Second operand",
+              "type": "number"
+            },
+            "operation": {
+              "description": "Math operation: add, sub, mul, div",
+              "enum": [
+                "add",
+                "sub",
+                "mul",
+                "div"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "operation",
+            "a",
+            "b"
+          ],
+          "type": "object"
+        }
+      }
+    }
+  ],
+  "tool_choice": "auto"
+}
+2026-03-31T02:47:37.288304Z DEBUG            main process_user_input{user_input=What was my first question?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: Request summary: 10 messages [system → user → assistant → tool → assistant → user → assistant → tool → assistant → user], 1 tools model=DeepSeek-V3-0324 message_count=10 tool_count=1 tool_choice=Some("auto") messages_roles=system → user → assistant → tool → assistant → user → assistant → tool → assistant → user
+2026-03-31T02:47:37.288341Z  INFO            main process_user_input{user_input=What was my first question?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: 🌐 Sending HTTP POST to http://api.haihub.cn/v1/chat/completions...
+2026-03-31T02:47:37.570806Z  INFO            main process_user_input{user_input=What was my first question?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: 📥 HTTP response received: 200 OK in 282ms status=200 OK elapsed_ms=282
+2026-03-31T02:47:37.571132Z DEBUG            main process_user_input{user_input=What was my first question?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: 📥 Raw API response body (494 bytes) response_body={"id":"3d4617f4a1cb4f88aab5fcca1efcc3a4","object":"chat.completion","created":1774925257,"model":"DeepSeek-V3-0324","choices":[{"index":0,"message":{"role":"assistant","content":"Your first question was: **\"What is 42 + 58?\"**","reasoning_content":null,"tool_calls":null},"logprobs":null,"finish_reason":"stop","matched_stop":1}],"usage":{"prompt_tokens":546,"total_tokens":563,"completion_tokens":17,"prompt_tokens_details":null,"reasoning_tokens":0},"metadata":{"weight_version":"default"}} response_len=494
+2026-03-31T02:47:37.571245Z DEBUG            main process_user_input{user_input=What was my first question?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: Parsed response: 1 choice(s) choice_count=1
+2026-03-31T02:47:37.571275Z DEBUG            main process_user_input{user_input=What was my first question?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: Response choice: finish_reason=stop, has_content=true, has_tool_calls=false finish_reason=stop has_content=true has_tool_calls=false
+2026-03-31T02:47:37.571304Z  INFO            main process_user_input{user_input=What was my first question?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: 💬 LLM returned text response (47 chars) text_len=47
+2026-03-31T02:47:37.571335Z DEBUG            main process_user_input{user_input=What was my first question?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: Full LLM text response text=Your first question was: **"What is 42 + 58?"**
+2026-03-31T02:47:37.571381Z  INFO            main process_user_input{user_input=What was my first question?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: 📥 LLM responded in 283ms (finish_reason=Stop) elapsed_ms=283 finish_reason=Stop
+2026-03-31T02:47:37.571408Z  INFO            main process_user_input{user_input=What was my first question?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: 💬 LLM returned TEXT response (47 chars, 0 tool calls recorded) text_len=47 total_tool_calls=0
+2026-03-31T02:47:37.571432Z DEBUG            main process_user_input{user_input=What was my first question?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: Full text response from LLM text=Your first question was: **"What is 42 + 58?"**
+  💬 LLM returned text: Your first question was: **"What is 42 + 58?"**
+2026-03-31T02:47:37.571488Z  INFO            main process_user_input{user_input=What was my first question?}: mini_agent_wasm_session::agent: Agentic loop completed in 283ms elapsed_ms=283 is_ok=true
+2026-03-31T02:47:37.571517Z  INFO            main process_user_input{user_input=What was my first question?}: mini_agent_wasm_session::agent: ✅ Turn completed with response (47 chars, 0 tool calls) response_len=47 tool_call_count=0
+2026-03-31T02:47:37.571548Z  INFO            main process_user_input{user_input=What was my first question?}: mini_agent_wasm_session::session: Completing Turn #2 in thread thread_id=a61a8f7f turn=2
+2026-03-31T02:47:37.571569Z  INFO            main process_user_input{user_input=What was my first question?}: mini_agent_wasm_session::session: ✅ Turn #2 completed (47 chars response, 0 tool calls) turn=2 response_len=47 tool_call_count=0
+2026-03-31T02:47:37.571597Z DEBUG            main process_user_input{user_input=What was my first question?}: mini_agent_wasm_session::agent: Turn recorded and completed in thread turn_count=3 thread_id=a61a8f7f
+2026-03-31T02:47:37.571627Z  INFO            main mini_agent_wasm_session::commands: ✅ Agent responded (47 chars) response_len=47
+
+🤖 Agent: Your first question was: **"What is 42 + 58?"**
+
+🧑 [T4:a61a] You: 2026-03-31T02:47:37.571672Z  INFO            main mini_agent_wasm_session: 📝 User input received input=/history
+2026-03-31T02:47:37.571695Z DEBUG            main mini_agent_wasm_session::commands: User requested turn history
+
+📜 Turn history for thread a61a8f7f (3 turns):
+
+   Turn #1 ✅ [02:47:35]
+     🧑 "What is 42 + 58?"
+     🔧 calculator({"a":42,"b":58,"operation":"add"}) → {
+  "expression": "42 + 58 = 100",
+  "result": 100.0,
+  "tim...
+     🤖 "The result of \(42 + 58\) is \(100\)."
+
+   Turn #2 ✅ [02:47:36]
+     🧑 "Now multiply that result by 3"
+     🔧 calculator({"a":100,"b":3,"operation":"mul"}) → {
+  "expression": "100 × 3 = 300",
+  "result": 300.0,
+  "ti...
+     🤖 "The result of \(100 \times 3\) is \(300\)."
+
+   Turn #3 ✅ [02:47:37]
+     🧑 "What was my first question?"
+     🤖 "Your first question was: **"What is 42 + 58?"**"
+
+🧑 [T4:a61a] You: 2026-03-31T02:47:37.571824Z  INFO            main mini_agent_wasm_session: 📝 User input received input=/new
+2026-03-31T02:47:37.571837Z  INFO            main mini_agent_wasm_session::commands: 📝 User requested new thread
+2026-03-31T02:47:37.571868Z  INFO            main mini_agent_wasm_session::session: 🧵 New thread created thread_id=e6c34b14 session_id=2c10fb56
+2026-03-31T02:47:37.571883Z  INFO            main mini_agent_wasm_session::session: 🧵 Created new thread (now 2 threads in session) session_id=2c10fb56 thread_id=e6c34b14 thread_count=2
+✅ New thread created: e6c34b14
+   Now in thread e6c34b14 (0 turns)
+
+🧑 [T1:e6c3] You: 2026-03-31T02:47:37.571920Z  INFO            main mini_agent_wasm_session: 📝 User input received input=What is 7 * 8?
+2026-03-31T02:47:37.571946Z DEBUG            main mini_agent_wasm_session: Building system prompt for current model system_prompt_model=DeepSeek-V3-0324
+2026-03-31T02:47:37.571963Z  INFO            main mini_agent_wasm_session::commands: 🤖 Processing user input through Session pipeline input=What is 7 * 8?
+
+🤖 Agent thinking...
+2026-03-31T02:47:37.572006Z  INFO            main process_user_input{user_input=What is 7 * 8?}: mini_agent_wasm_session::agent: 📋 Processing user input in thread thread_id=e6c34b14 existing_turns=0
+2026-03-31T02:47:37.572026Z  INFO            main process_user_input{user_input=What is 7 * 8?}: mini_agent_wasm_session::session: 📝 Starting Turn #0 in thread thread_id=e6c34b14 turn_number=0 user_input=What is 7 * 8?
+2026-03-31T02:47:37.572046Z DEBUG            main process_user_input{user_input=What is 7 * 8?}: mini_agent_wasm_session::session: Creating new Turn #0 turn_number=0 user_input=What is 7 * 8?
+2026-03-31T02:47:37.572067Z  INFO            main process_user_input{user_input=What is 7 * 8?}: mini_agent_wasm_session::agent: 📝 Turn #1 started turn_number=1 thread_id=e6c34b14
+  📝 Turn #1 started in thread e6c34b14
+2026-03-31T02:47:37.572094Z DEBUG            main process_user_input{user_input=What is 7 * 8?}: mini_agent_wasm_session::session: 🔄 Rebuilding ChatMessage history from 1 turns thread_id=e6c34b14 turn_count=1
+2026-03-31T02:47:37.572117Z TRACE            main process_user_input{user_input=What is 7 * 8?}: mini_agent_wasm_session::session: Added user message for Turn #0 turn=0
+2026-03-31T02:47:37.572136Z  INFO            main process_user_input{user_input=What is 7 * 8?}: mini_agent_wasm_session::session: 📨 Rebuilt 1 messages from 1 turns thread_id=e6c34b14 total_messages=1 turn_count=1
+2026-03-31T02:47:37.572160Z  INFO            main process_user_input{user_input=What is 7 * 8?}: mini_agent_wasm_session::agent: 📨 Context rebuilt: 2 messages (1 system + 1 from 1 turns) total_messages=2 history_messages=1 turn_count=1
+2026-03-31T02:47:37.572194Z DEBUG            main process_user_input{user_input=What is 7 * 8?}: mini_agent_wasm_session::agent: Message role sequence messages_roles=SYS → USR
+  📨 Context: 2 messages (from 1 turns)
+2026-03-31T02:47:37.572214Z  INFO            main process_user_input{user_input=What is 7 * 8?}: mini_agent_wasm_session::agent: 🔄 Launching agentic loop...
+2026-03-31T02:47:37.572265Z  INFO            main process_user_input{user_input=What is 7 * 8?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: 🔄 Entering agentic loop tool_count=1 tools=["calculator"] initial_message_count=2
+2026-03-31T02:47:37.572293Z  INFO            main process_user_input{user_input=What is 7 * 8?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: ━━━ Iteration 1/10 ━━━ iteration=1 max=10 message_count=2 recorded_tool_calls=0
+
+--- Iteration 1/10 ---
+2026-03-31T02:47:37.572322Z  INFO            main process_user_input{user_input=What is 7 * 8?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: 📤 Step 1: Calling LLM...
+2026-03-31T02:47:37.572340Z DEBUG            main process_user_input{user_input=What is 7 * 8?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: Sending 2 messages and 1 tool definitions to LLM message_count=2 tool_count=1
+2026-03-31T02:47:37.572374Z TRACE            main process_user_input{user_input=What is 7 * 8?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: Message flow before LLM call messages_summary=[0]SYS → [1]USR
+2026-03-31T02:47:37.572399Z  INFO            main process_user_input{user_input=What is 7 * 8?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: 📤 Preparing LLM API request url=http://api.haihub.cn/v1/chat/completions model=DeepSeek-V3-0324 message_count=2 tool_count=1
+2026-03-31T02:47:37.572572Z DEBUG            main process_user_input{user_input=What is 7 * 8?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: 📤 Full OpenAI API request body request_body={
+  "model": "DeepSeek-V3-0324",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a helpful assistant powered by the DeepSeek-V3-0324 model. You have access to a calculator tool. When the user asks a math question, use the calculator tool to compute the answer. For non-math questions, respond directly. You have conversation memory — you can reference previous turns in this thread. When asked about your identity, truthfully state that you are based on DeepSeek-V3-0324."
+    },
+    {
+      "role": "user",
+      "content": "What is 7 * 8?"
+    }
+  ],
+  "tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "calculator",
+        "description": "A sandboxed calculator tool. Performs basic math operations (add, sub, mul, div) inside a WASM sandbox.",
+        "parameters": {
+          "properties": {
+            "a": {
+              "description": "First operand",
+              "type": "number"
+            },
+            "b": {
+              "description": "Second operand",
+              "type": "number"
+            },
+            "operation": {
+              "description": "Math operation: add, sub, mul, div",
+              "enum": [
+                "add",
+                "sub",
+                "mul",
+                "div"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "operation",
+            "a",
+            "b"
+          ],
+          "type": "object"
+        }
+      }
+    }
+  ],
+  "tool_choice": "auto"
+}
+2026-03-31T02:47:37.572601Z DEBUG            main process_user_input{user_input=What is 7 * 8?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: Request summary: 2 messages [system → user], 1 tools model=DeepSeek-V3-0324 message_count=2 tool_count=1 tool_choice=Some("auto") messages_roles=system → user
+2026-03-31T02:47:37.572630Z  INFO            main process_user_input{user_input=What is 7 * 8?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: 🌐 Sending HTTP POST to http://api.haihub.cn/v1/chat/completions...
+2026-03-31T02:47:37.958021Z  INFO            main process_user_input{user_input=What is 7 * 8?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: 📥 HTTP response received: 200 OK in 385ms status=200 OK elapsed_ms=385
+2026-03-31T02:47:37.958329Z DEBUG            main process_user_input{user_input=What is 7 * 8?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: 📥 Raw API response body (613 bytes) response_body={"id":"be6db4624624487c8e8c360d51e2affd","object":"chat.completion","created":1774925258,"model":"DeepSeek-V3-0324","choices":[{"index":0,"message":{"role":"assistant","content":null,"reasoning_content":null,"tool_calls":[{"id":"call_110158e14d564b8c96ddb6bf","index":-1,"type":"function","function":{"name":"calculator","arguments":"{\"a\": 7, \"b\": 8, \"operation\": \"mul\"}"}}]},"logprobs":null,"finish_reason":"tool_calls","matched_stop":null}],"usage":{"prompt_tokens":322,"total_tokens":348,"completion_tokens":26,"prompt_tokens_details":null,"reasoning_tokens":0},"metadata":{"weight_version":"default"}} response_len=613
+2026-03-31T02:47:37.958455Z DEBUG            main process_user_input{user_input=What is 7 * 8?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: Parsed response: 1 choice(s) choice_count=1
+2026-03-31T02:47:37.958484Z DEBUG            main process_user_input{user_input=What is 7 * 8?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: Response choice: finish_reason=tool_calls, has_content=false, has_tool_calls=true finish_reason=tool_calls has_content=false has_tool_calls=true
+2026-03-31T02:47:37.958514Z  INFO            main process_user_input{user_input=What is 7 * 8?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: 🔧 LLM requested 1 tool call(s) tool_call_count=1
+2026-03-31T02:47:37.958547Z DEBUG            main process_user_input{user_input=What is 7 * 8?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: Parsing tool call [0]: calculator (id=call_110158e14d564b8c96ddb6bf) index=0 id=call_110158e14d564b8c96ddb6bf function_name=calculator raw_arguments={"a": 7, "b": 8, "operation": "mul"}
+2026-03-31T02:47:37.958613Z TRACE            main process_user_input{user_input=What is 7 * 8?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: Parsed tool arguments for 'calculator' parsed_arguments={
+  "a": 7,
+  "b": 8,
+  "operation": "mul"
+}
+2026-03-31T02:47:37.958656Z  INFO            main process_user_input{user_input=What is 7 * 8?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: 📥 LLM responded in 386ms (finish_reason=ToolUse) elapsed_ms=386 finish_reason=ToolUse
+2026-03-31T02:47:37.958686Z  INFO            main process_user_input{user_input=What is 7 * 8?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: 🔧 LLM returned TOOL CALLS (1 tool(s)) tool_call_count=1 has_content=false
+2026-03-31T02:47:37.958715Z DEBUG            main process_user_input{user_input=What is 7 * 8?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: Tool call [0]: calculator (id=call_110158e14d564b8c96ddb6bf) index=0 tool_name=calculator tool_call_id=call_110158e14d564b8c96ddb6bf arguments={
+  "a": 7,
+  "b": 8,
+  "operation": "mul"
+}
+  🔧 LLM wants to call 1 tool(s)
+2026-03-31T02:47:37.958747Z  INFO            main process_user_input{user_input=What is 7 * 8?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: 📝 Adding assistant message with tool calls to conversation context
+2026-03-31T02:47:37.958788Z DEBUG            main process_user_input{user_input=What is 7 * 8?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: Context now has 3 messages (after adding assistant tool call message) message_count=3
+2026-03-31T02:47:37.958811Z  INFO            main process_user_input{user_input=What is 7 * 8?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: ⚙️  Executing tool [1/1]: calculator index=0 tool=calculator
+2026-03-31T02:47:37.958837Z DEBUG            main process_user_input{user_input=What is 7 * 8?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: Tool execution input tool_name=calculator tool_call_id=call_110158e14d564b8c96ddb6bf arguments={
+  "a": 7,
+  "b": 8,
+  "operation": "mul"
+}
+2026-03-31T02:47:37.958861Z  INFO            main process_user_input{user_input=What is 7 * 8?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::tools: 🔍 Looking up tool in registry tool=calculator
+2026-03-31T02:47:37.958890Z DEBUG            main process_user_input{user_input=What is 7 * 8?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::tools: Tool found, preparing execution tool=calculator params={
+  "a": 7,
+  "b": 8,
+  "operation": "mul"
+}
+  ⚙️  Executing tool: calculator with params: {"a":7,"b":8,"operation":"mul"}
+2026-03-31T02:47:37.958925Z  INFO            main process_user_input{user_input=What is 7 * 8?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::tools: ⏱️  Executing tool with 30s timeout tool=calculator timeout_secs=30
+2026-03-31T02:47:37.958962Z  INFO            main process_user_input{user_input=What is 7 * 8?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::tools::wasm: 🔧 WasmTool::execute() — dispatching to WASM sandbox tool=calculator params={"a":7,"b":8,"operation":"mul"}
+2026-03-31T02:47:37.959035Z  INFO tokio-rt-worker mini_agent_wasm_session::tools::wasm: 🏖️  Executing tool in WASM sandbox tool=calculator params={"a":7,"b":8,"operation":"mul"} fuel_limit=1000000
+2026-03-31T02:47:37.960397Z DEBUG tokio-rt-worker mini_agent_wasm_session::tools::wasm: Instantiating WASM guest in sandbox...
+2026-03-31T02:47:37.961211Z  INFO tokio-rt-worker mini_agent_wasm_session::tools::wasm: 📤 Calling WASM guest execute() function
+2026-03-31T02:47:37.961413Z  INFO tokio-rt-worker mini_agent_wasm_session::tools::wasm: 📋 [WASM LOG] [INFO] Calculating: 7 mul 8 wasm_log_level=INFO wasm_message=Calculating: 7 mul 8
+    📋 [WASM LOG] [INFO] Calculating: 7 mul 8
+2026-03-31T02:47:37.961461Z TRACE tokio-rt-worker mini_agent_wasm_session::tools::wasm: WASM guest called now_millis() millis=1774925257961
+2026-03-31T02:47:37.961488Z  INFO tokio-rt-worker mini_agent_wasm_session::tools::wasm: 📋 [WASM LOG] [INFO] Result: 56 (at timestamp 1774925257961) wasm_log_level=INFO wasm_message=Result: 56 (at timestamp 1774925257961)
+    📋 [WASM LOG] [INFO] Result: 56 (at timestamp 1774925257961)
+2026-03-31T02:47:37.961548Z  INFO tokio-rt-worker mini_agent_wasm_session::tools::wasm: ⛽ Fuel consumed: 15419 / 1000000 units fuel_consumed=15419 fuel_remaining=984581 fuel_limit=1000000
+    ⛽ Fuel consumed: 15419 / 1000000 units
+2026-03-31T02:47:37.961570Z DEBUG tokio-rt-worker mini_agent_wasm_session::tools::wasm: WASM guest produced 2 log message(s) log_count=2
+2026-03-31T02:47:37.961585Z TRACE tokio-rt-worker mini_agent_wasm_session::tools::wasm: Guest log: [INFO] Calculating: 7 mul 8 wasm_log_level=INFO wasm_log_msg=Calculating: 7 mul 8
+2026-03-31T02:47:37.961599Z TRACE tokio-rt-worker mini_agent_wasm_session::tools::wasm: Guest log: [INFO] Result: 56 (at timestamp 1774925257961) wasm_log_level=INFO wasm_log_msg=Result: 56 (at timestamp 1774925257961)
+2026-03-31T02:47:37.961614Z  INFO tokio-rt-worker mini_agent_wasm_session::tools::wasm: ✅ WASM tool execution succeeded (71 chars output) output_len=71
+2026-03-31T02:47:37.961627Z DEBUG tokio-rt-worker mini_agent_wasm_session::tools::wasm: Full WASM tool output output={"expression":"7 × 8 = 56","result":56.0,"timestamp_ms":1774925257961}
+2026-03-31T02:47:37.962008Z  INFO            main process_user_input{user_input=What is 7 * 8?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::tools::wasm: WASM sandbox execution completed in 3ms elapsed_ms=3
+2026-03-31T02:47:37.962143Z  INFO            main process_user_input{user_input=What is 7 * 8?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::tools: ✅ Tool execution succeeded in 3ms tool=calculator elapsed_ms=3
+2026-03-31T02:47:37.962223Z TRACE            main process_user_input{user_input=What is 7 * 8?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::tools: Raw tool output tool=calculator raw_output={
+  "expression": "7 × 8 = 56",
+  "result": 56.0,
+  "timestamp_ms": 1774925257961
+}
+2026-03-31T02:47:37.962274Z DEBUG            main process_user_input{user_input=What is 7 * 8?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::tools: Serialized tool output (84 chars) tool=calculator serialized_len=84 serialized={
+  "expression": "7 × 8 = 56",
+  "result": 56.0,
+  "timestamp_ms": 1774925257961
+}
+2026-03-31T02:47:37.962322Z DEBUG            main process_user_input{user_input=What is 7 * 8?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::tools: Wrapping tool output in <tool_output> tags (111 chars) tool=calculator tool_call_id=call_110158e14d564b8c96ddb6bf content_len=111
+2026-03-31T02:47:37.962365Z TRACE            main process_user_input{user_input=What is 7 * 8?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::tools: Full wrapped tool result tool=calculator wrapped_content=<tool_output>{
+  "expression": "7 × 8 = 56",
+  "result": 56.0,
+  "timestamp_ms": 1774925257961
+}</tool_output>
+2026-03-31T02:47:37.962401Z  INFO            main process_user_input{user_input=What is 7 * 8?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::tools: 📝 Creating tool result ChatMessage (role=Tool) tool=calculator tool_call_id=call_110158e14d564b8c96ddb6bf is_error=false
+2026-03-31T02:47:37.962443Z  INFO            main process_user_input{user_input=What is 7 * 8?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: ✅ Tool 'calculator' succeeded in 3ms (84 chars output) tool=calculator elapsed_ms=3 output_len=84
+2026-03-31T02:47:37.962485Z DEBUG            main process_user_input{user_input=What is 7 * 8?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: Full tool output tool=calculator output={
+  "expression": "7 × 8 = 56",
+  "result": 56.0,
+  "timestamp_ms": 1774925257961
+}
+  ✅ Tool 'calculator' succeeded: {
+  "expression": "7 × 8 = 56",
+  "result": 56.0,
+  "timestamp_ms": 17749252579...
+2026-03-31T02:47:37.962544Z DEBUG            main process_user_input{user_input=What is 7 * 8?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: Recording tool call for Turn history tool=calculator is_success=true
+2026-03-31T02:47:37.962586Z  INFO            main process_user_input{user_input=What is 7 * 8?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: 📝 Adding tool result for 'calculator' (call_id=call_110158e14d564b8c96ddb6bf) to conversation context
+2026-03-31T02:47:37.962627Z DEBUG            main process_user_input{user_input=What is 7 * 8?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: Context now has 4 messages (after adding tool result) message_count=4
+2026-03-31T02:47:37.962664Z  INFO            main process_user_input{user_input=What is 7 * 8?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: 🔄 All tools executed. Looping back to LLM with updated context (4 messages, 1 recorded tool calls) message_count=4 total_recorded=1
+2026-03-31T02:47:37.962710Z  INFO            main process_user_input{user_input=What is 7 * 8?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: ━━━ Iteration 2/10 ━━━ iteration=2 max=10 message_count=4 recorded_tool_calls=1
+
+--- Iteration 2/10 ---
+2026-03-31T02:47:37.962759Z  INFO            main process_user_input{user_input=What is 7 * 8?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: 📤 Step 1: Calling LLM...
+2026-03-31T02:47:37.962791Z DEBUG            main process_user_input{user_input=What is 7 * 8?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: Sending 4 messages and 1 tool definitions to LLM message_count=4 tool_count=1
+2026-03-31T02:47:37.962850Z TRACE            main process_user_input{user_input=What is 7 * 8?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: Message flow before LLM call messages_summary=[0]SYS → [1]USR → [2]AST → [3]TOL
+2026-03-31T02:47:37.962891Z  INFO            main process_user_input{user_input=What is 7 * 8?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: 📤 Preparing LLM API request url=http://api.haihub.cn/v1/chat/completions model=DeepSeek-V3-0324 message_count=4 tool_count=1
+2026-03-31T02:47:37.963247Z DEBUG            main process_user_input{user_input=What is 7 * 8?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: 📤 Full OpenAI API request body request_body={
+  "model": "DeepSeek-V3-0324",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a helpful assistant powered by the DeepSeek-V3-0324 model. You have access to a calculator tool. When the user asks a math question, use the calculator tool to compute the answer. For non-math questions, respond directly. You have conversation memory — you can reference previous turns in this thread. When asked about your identity, truthfully state that you are based on DeepSeek-V3-0324."
+    },
+    {
+      "role": "user",
+      "content": "What is 7 * 8?"
+    },
+    {
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_110158e14d564b8c96ddb6bf",
+          "type": "function",
+          "function": {
+            "name": "calculator",
+            "arguments": "{\"a\":7,\"b\":8,\"operation\":\"mul\"}"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "content": "<tool_output>{\n  \"expression\": \"7 × 8 = 56\",\n  \"result\": 56.0,\n  \"timestamp_ms\": 1774925257961\n}</tool_output>",
+      "tool_call_id": "call_110158e14d564b8c96ddb6bf",
+      "name": "calculator"
+    }
+  ],
+  "tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "calculator",
+        "description": "A sandboxed calculator tool. Performs basic math operations (add, sub, mul, div) inside a WASM sandbox.",
+        "parameters": {
+          "properties": {
+            "a": {
+              "description": "First operand",
+              "type": "number"
+            },
+            "b": {
+              "description": "Second operand",
+              "type": "number"
+            },
+            "operation": {
+              "description": "Math operation: add, sub, mul, div",
+              "enum": [
+                "add",
+                "sub",
+                "mul",
+                "div"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "operation",
+            "a",
+            "b"
+          ],
+          "type": "object"
+        }
+      }
+    }
+  ],
+  "tool_choice": "auto"
+}
+2026-03-31T02:47:37.963305Z DEBUG            main process_user_input{user_input=What is 7 * 8?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: Request summary: 4 messages [system → user → assistant → tool], 1 tools model=DeepSeek-V3-0324 message_count=4 tool_count=1 tool_choice=Some("auto") messages_roles=system → user → assistant → tool
+2026-03-31T02:47:37.963355Z  INFO            main process_user_input{user_input=What is 7 * 8?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: 🌐 Sending HTTP POST to http://api.haihub.cn/v1/chat/completions...
+2026-03-31T02:47:38.286333Z  INFO            main process_user_input{user_input=What is 7 * 8?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: 📥 HTTP response received: 200 OK in 322ms status=200 OK elapsed_ms=322
+2026-03-31T02:47:38.286750Z DEBUG            main process_user_input{user_input=What is 7 * 8?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: 📥 Raw API response body (489 bytes) response_body={"id":"48ec2da74814452db3ba0681981a711a","object":"chat.completion","created":1774925258,"model":"DeepSeek-V3-0324","choices":[{"index":0,"message":{"role":"assistant","content":"The result of \\(7 \\times 8\\) is \\(56\\).","reasoning_content":null,"tool_calls":null},"logprobs":null,"finish_reason":"stop","matched_stop":1}],"usage":{"prompt_tokens":419,"total_tokens":434,"completion_tokens":15,"prompt_tokens_details":null,"reasoning_tokens":0},"metadata":{"weight_version":"default"}} response_len=489
+2026-03-31T02:47:38.286906Z DEBUG            main process_user_input{user_input=What is 7 * 8?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: Parsed response: 1 choice(s) choice_count=1
+2026-03-31T02:47:38.286933Z DEBUG            main process_user_input{user_input=What is 7 * 8?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: Response choice: finish_reason=stop, has_content=true, has_tool_calls=false finish_reason=stop has_content=true has_tool_calls=false
+2026-03-31T02:47:38.286961Z  INFO            main process_user_input{user_input=What is 7 * 8?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: 💬 LLM returned text response (39 chars) text_len=39
+2026-03-31T02:47:38.286982Z DEBUG            main process_user_input{user_input=What is 7 * 8?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: Full LLM text response text=The result of \(7 \times 8\) is \(56\).
+2026-03-31T02:47:38.287024Z  INFO            main process_user_input{user_input=What is 7 * 8?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: 📥 LLM responded in 324ms (finish_reason=Stop) elapsed_ms=324 finish_reason=Stop
+2026-03-31T02:47:38.287060Z  INFO            main process_user_input{user_input=What is 7 * 8?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: 💬 LLM returned TEXT response (39 chars, 1 tool calls recorded) text_len=39 total_tool_calls=1
+2026-03-31T02:47:38.287106Z DEBUG            main process_user_input{user_input=What is 7 * 8?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: Full text response from LLM text=The result of \(7 \times 8\) is \(56\).
+  💬 LLM returned text: The result of \(7 \times 8\) is \(56\).
+2026-03-31T02:47:38.287192Z  INFO            main process_user_input{user_input=What is 7 * 8?}: mini_agent_wasm_session::agent: Agentic loop completed in 714ms elapsed_ms=714 is_ok=true
+2026-03-31T02:47:38.287235Z  INFO            main process_user_input{user_input=What is 7 * 8?}: mini_agent_wasm_session::agent: ✅ Turn completed with response (39 chars, 1 tool calls) response_len=39 tool_call_count=1
+2026-03-31T02:47:38.287279Z DEBUG            main process_user_input{user_input=What is 7 * 8?}: mini_agent_wasm_session::session: Recording tool call 'calculator' in Turn #0 turn=0 tool_name=calculator
+2026-03-31T02:47:38.287315Z DEBUG            main process_user_input{user_input=What is 7 * 8?}: mini_agent_wasm_session::session: Recording tool result for 'calculator' in Turn #0 turn=0 tool_name=calculator
+2026-03-31T02:47:38.287362Z  INFO            main process_user_input{user_input=What is 7 * 8?}: mini_agent_wasm_session::session: Completing Turn #0 in thread thread_id=e6c34b14 turn=0
+2026-03-31T02:47:38.287396Z  INFO            main process_user_input{user_input=What is 7 * 8?}: mini_agent_wasm_session::session: ✅ Turn #0 completed (39 chars response, 1 tool calls) turn=0 response_len=39 tool_call_count=1
+2026-03-31T02:47:38.287439Z DEBUG            main process_user_input{user_input=What is 7 * 8?}: mini_agent_wasm_session::agent: Turn recorded and completed in thread turn_count=1 thread_id=e6c34b14
+2026-03-31T02:47:38.287489Z  INFO            main mini_agent_wasm_session::commands: ✅ Agent responded (39 chars) response_len=39
+
+🤖 Agent: The result of \(7 \times 8\) is \(56\).
+
+🧑 [T2:e6c3] You: 2026-03-31T02:47:38.287550Z  INFO            main mini_agent_wasm_session: 📝 User input received input=Now add 100 to that
+2026-03-31T02:47:38.287574Z DEBUG            main mini_agent_wasm_session: Building system prompt for current model system_prompt_model=DeepSeek-V3-0324
+2026-03-31T02:47:38.287600Z  INFO            main mini_agent_wasm_session::commands: 🤖 Processing user input through Session pipeline input=Now add 100 to that
+
+🤖 Agent thinking...
+2026-03-31T02:47:38.287660Z  INFO            main process_user_input{user_input=Now add 100 to that}: mini_agent_wasm_session::agent: 📋 Processing user input in thread thread_id=e6c34b14 existing_turns=1
+2026-03-31T02:47:38.287694Z  INFO            main process_user_input{user_input=Now add 100 to that}: mini_agent_wasm_session::session: 📝 Starting Turn #1 in thread thread_id=e6c34b14 turn_number=1 user_input=Now add 100 to that
+2026-03-31T02:47:38.287727Z DEBUG            main process_user_input{user_input=Now add 100 to that}: mini_agent_wasm_session::session: Creating new Turn #1 turn_number=1 user_input=Now add 100 to that
+2026-03-31T02:47:38.287760Z  INFO            main process_user_input{user_input=Now add 100 to that}: mini_agent_wasm_session::agent: 📝 Turn #2 started turn_number=2 thread_id=e6c34b14
+  📝 Turn #2 started in thread e6c34b14
+2026-03-31T02:47:38.287801Z DEBUG            main process_user_input{user_input=Now add 100 to that}: mini_agent_wasm_session::session: 🔄 Rebuilding ChatMessage history from 2 turns thread_id=e6c34b14 turn_count=2
+2026-03-31T02:47:38.287837Z TRACE            main process_user_input{user_input=Now add 100 to that}: mini_agent_wasm_session::session: Added user message for Turn #0 turn=0
+2026-03-31T02:47:38.287867Z DEBUG            main process_user_input{user_input=Now add 100 to that}: mini_agent_wasm_session::session: Turn #0 has 1 tool call(s) to replay turn=0 tool_call_count=1
+2026-03-31T02:47:38.287913Z TRACE            main process_user_input{user_input=Now add 100 to that}: mini_agent_wasm_session::session: Added assistant response for Turn #0 turn=0
+2026-03-31T02:47:38.287945Z TRACE            main process_user_input{user_input=Now add 100 to that}: mini_agent_wasm_session::session: Added user message for Turn #1 turn=1
+2026-03-31T02:47:38.287974Z  INFO            main process_user_input{user_input=Now add 100 to that}: mini_agent_wasm_session::session: 📨 Rebuilt 5 messages from 2 turns thread_id=e6c34b14 total_messages=5 turn_count=2
+2026-03-31T02:47:38.288010Z  INFO            main process_user_input{user_input=Now add 100 to that}: mini_agent_wasm_session::agent: 📨 Context rebuilt: 6 messages (1 system + 5 from 2 turns) total_messages=6 history_messages=5 turn_count=2
+2026-03-31T02:47:38.288059Z DEBUG            main process_user_input{user_input=Now add 100 to that}: mini_agent_wasm_session::agent: Message role sequence messages_roles=SYS → USR → AST → TOL → AST → USR
+  📨 Context: 6 messages (from 2 turns)
+2026-03-31T02:47:38.288093Z  INFO            main process_user_input{user_input=Now add 100 to that}: mini_agent_wasm_session::agent: 🔄 Launching agentic loop...
+2026-03-31T02:47:38.288160Z  INFO            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: 🔄 Entering agentic loop tool_count=1 tools=["calculator"] initial_message_count=6
+2026-03-31T02:47:38.288204Z  INFO            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: ━━━ Iteration 1/10 ━━━ iteration=1 max=10 message_count=6 recorded_tool_calls=0
+
+--- Iteration 1/10 ---
+2026-03-31T02:47:38.288253Z  INFO            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: 📤 Step 1: Calling LLM...
+2026-03-31T02:47:38.288283Z DEBUG            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: Sending 6 messages and 1 tool definitions to LLM message_count=6 tool_count=1
+2026-03-31T02:47:38.288337Z TRACE            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: Message flow before LLM call messages_summary=[0]SYS → [1]USR → [2]AST → [3]TOL → [4]AST → [5]USR
+2026-03-31T02:47:38.288375Z  INFO            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: 📤 Preparing LLM API request url=http://api.haihub.cn/v1/chat/completions model=DeepSeek-V3-0324 message_count=6 tool_count=1
+2026-03-31T02:47:38.288763Z DEBUG            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: 📤 Full OpenAI API request body request_body={
+  "model": "DeepSeek-V3-0324",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a helpful assistant powered by the DeepSeek-V3-0324 model. You have access to a calculator tool. When the user asks a math question, use the calculator tool to compute the answer. For non-math questions, respond directly. You have conversation memory — you can reference previous turns in this thread. When asked about your identity, truthfully state that you are based on DeepSeek-V3-0324."
+    },
+    {
+      "role": "user",
+      "content": "What is 7 * 8?"
+    },
+    {
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_0_0",
+          "type": "function",
+          "function": {
+            "name": "calculator",
+            "arguments": "{\"a\":7,\"b\":8,\"operation\":\"mul\"}"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "content": "{\n  \"expression\": \"7 × 8 = 56\",\n  \"result\": 56.0,\n  \"timestamp_ms\": 1774925257961\n}",
+      "tool_call_id": "call_0_0",
+      "name": "calculator"
+    },
+    {
+      "role": "assistant",
+      "content": "The result of \\(7 \\times 8\\) is \\(56\\)."
+    },
+    {
+      "role": "user",
+      "content": "Now add 100 to that"
+    }
+  ],
+  "tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "calculator",
+        "description": "A sandboxed calculator tool. Performs basic math operations (add, sub, mul, div) inside a WASM sandbox.",
+        "parameters": {
+          "properties": {
+            "a": {
+              "description": "First operand",
+              "type": "number"
+            },
+            "b": {
+              "description": "Second operand",
+              "type": "number"
+            },
+            "operation": {
+              "description": "Math operation: add, sub, mul, div",
+              "enum": [
+                "add",
+                "sub",
+                "mul",
+                "div"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "operation",
+            "a",
+            "b"
+          ],
+          "type": "object"
+        }
+      }
+    }
+  ],
+  "tool_choice": "auto"
+}
+2026-03-31T02:47:38.288828Z DEBUG            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: Request summary: 6 messages [system → user → assistant → tool → assistant → user], 1 tools model=DeepSeek-V3-0324 message_count=6 tool_count=1 tool_choice=Some("auto") messages_roles=system → user → assistant → tool → assistant → user
+2026-03-31T02:47:38.288883Z  INFO            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: 🌐 Sending HTTP POST to http://api.haihub.cn/v1/chat/completions...
+2026-03-31T02:47:39.187111Z  INFO            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: 📥 HTTP response received: 200 OK in 898ms status=200 OK elapsed_ms=898
+2026-03-31T02:47:39.187506Z DEBUG            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: 📥 Raw API response body (779 bytes) response_body={"id":"b45f4749c1d64f63a124f867c407d089","object":"chat.completion","created":1774925259,"model":"DeepSeek-V3-0324","choices":[{"index":0,"message":{"role":"assistant","content":null,"reasoning_content":null,"tool_calls":[{"id":"call_d9dea5502e264624824dfc40","index":-1,"type":"function","function":{"name":"calculator","arguments":"{\"a\": 56, \"b\": 100, \"operation\": \"add\"}"}},{"id":"call_689dd21b7b3d4164ac562448","index":-1,"type":"function","function":{"name":"calculator","arguments":"{\"a\": 56, \"b\": 100, \"operation\": \"add\"}"}}]},"logprobs":null,"finish_reason":"tool_calls","matched_stop":null}],"usage":{"prompt_tokens":434,"total_tokens":521,"completion_tokens":87,"prompt_tokens_details":null,"reasoning_tokens":0},"metadata":{"weight_version":"default"}} response_len=779
+2026-03-31T02:47:39.187754Z DEBUG            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: Parsed response: 1 choice(s) choice_count=1
+2026-03-31T02:47:39.187840Z DEBUG            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: Response choice: finish_reason=tool_calls, has_content=false, has_tool_calls=true finish_reason=tool_calls has_content=false has_tool_calls=true
+2026-03-31T02:47:39.187923Z  INFO            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: 🔧 LLM requested 2 tool call(s) tool_call_count=2
+2026-03-31T02:47:39.187990Z DEBUG            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: Parsing tool call [0]: calculator (id=call_d9dea5502e264624824dfc40) index=0 id=call_d9dea5502e264624824dfc40 function_name=calculator raw_arguments={"a": 56, "b": 100, "operation": "add"}
+2026-03-31T02:47:39.188113Z TRACE            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: Parsed tool arguments for 'calculator' parsed_arguments={
+  "a": 56,
+  "b": 100,
+  "operation": "add"
+}
+2026-03-31T02:47:39.188179Z DEBUG            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: Parsing tool call [1]: calculator (id=call_689dd21b7b3d4164ac562448) index=1 id=call_689dd21b7b3d4164ac562448 function_name=calculator raw_arguments={"a": 56, "b": 100, "operation": "add"}
+2026-03-31T02:47:39.188278Z TRACE            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: Parsed tool arguments for 'calculator' parsed_arguments={
+  "a": 56,
+  "b": 100,
+  "operation": "add"
+}
+2026-03-31T02:47:39.188368Z  INFO            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: 📥 LLM responded in 899ms (finish_reason=ToolUse) elapsed_ms=899 finish_reason=ToolUse
+2026-03-31T02:47:39.188436Z  INFO            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: 🔧 LLM returned TOOL CALLS (2 tool(s)) tool_call_count=2 has_content=false
+2026-03-31T02:47:39.188509Z DEBUG            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: Tool call [0]: calculator (id=call_d9dea5502e264624824dfc40) index=0 tool_name=calculator tool_call_id=call_d9dea5502e264624824dfc40 arguments={
+  "a": 56,
+  "b": 100,
+  "operation": "add"
+}
+2026-03-31T02:47:39.188585Z DEBUG            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: Tool call [1]: calculator (id=call_689dd21b7b3d4164ac562448) index=1 tool_name=calculator tool_call_id=call_689dd21b7b3d4164ac562448 arguments={
+  "a": 56,
+  "b": 100,
+  "operation": "add"
+}
+  🔧 LLM wants to call 2 tool(s)
+2026-03-31T02:47:39.188659Z  INFO            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: 📝 Adding assistant message with tool calls to conversation context
+2026-03-31T02:47:39.188724Z DEBUG            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: Context now has 7 messages (after adding assistant tool call message) message_count=7
+2026-03-31T02:47:39.188780Z  INFO            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: ⚙️  Executing tool [1/2]: calculator index=0 tool=calculator
+2026-03-31T02:47:39.188866Z DEBUG            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: Tool execution input tool_name=calculator tool_call_id=call_d9dea5502e264624824dfc40 arguments={
+  "a": 56,
+  "b": 100,
+  "operation": "add"
+}
+2026-03-31T02:47:39.188924Z  INFO            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::tools: 🔍 Looking up tool in registry tool=calculator
+2026-03-31T02:47:39.188994Z DEBUG            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::tools: Tool found, preparing execution tool=calculator params={
+  "a": 56,
+  "b": 100,
+  "operation": "add"
+}
+  ⚙️  Executing tool: calculator with params: {"a":56,"b":100,"operation":"add"}
+2026-03-31T02:47:39.189074Z  INFO            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::tools: ⏱️  Executing tool with 30s timeout tool=calculator timeout_secs=30
+2026-03-31T02:47:39.189154Z  INFO            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::tools::wasm: 🔧 WasmTool::execute() — dispatching to WASM sandbox tool=calculator params={"a":56,"b":100,"operation":"add"}
+2026-03-31T02:47:39.189284Z  INFO tokio-rt-worker mini_agent_wasm_session::tools::wasm: 🏖️  Executing tool in WASM sandbox tool=calculator params={"a":56,"b":100,"operation":"add"} fuel_limit=1000000
+2026-03-31T02:47:39.191445Z DEBUG tokio-rt-worker mini_agent_wasm_session::tools::wasm: Instantiating WASM guest in sandbox...
+2026-03-31T02:47:39.192085Z  INFO tokio-rt-worker mini_agent_wasm_session::tools::wasm: 📤 Calling WASM guest execute() function
+2026-03-31T02:47:39.192237Z  INFO tokio-rt-worker mini_agent_wasm_session::tools::wasm: 📋 [WASM LOG] [INFO] Calculating: 56 add 100 wasm_log_level=INFO wasm_message=Calculating: 56 add 100
+    📋 [WASM LOG] [INFO] Calculating: 56 add 100
+2026-03-31T02:47:39.192303Z TRACE tokio-rt-worker mini_agent_wasm_session::tools::wasm: WASM guest called now_millis() millis=1774925259192
+2026-03-31T02:47:39.192340Z  INFO tokio-rt-worker mini_agent_wasm_session::tools::wasm: 📋 [WASM LOG] [INFO] Result: 156 (at timestamp 1774925259192) wasm_log_level=INFO wasm_message=Result: 156 (at timestamp 1774925259192)
+    📋 [WASM LOG] [INFO] Result: 156 (at timestamp 1774925259192)
+2026-03-31T02:47:39.192417Z  INFO tokio-rt-worker mini_agent_wasm_session::tools::wasm: ⛽ Fuel consumed: 15831 / 1000000 units fuel_consumed=15831 fuel_remaining=984169 fuel_limit=1000000
+    ⛽ Fuel consumed: 15831 / 1000000 units
+2026-03-31T02:47:39.192446Z DEBUG tokio-rt-worker mini_agent_wasm_session::tools::wasm: WASM guest produced 2 log message(s) log_count=2
+2026-03-31T02:47:39.192461Z TRACE tokio-rt-worker mini_agent_wasm_session::tools::wasm: Guest log: [INFO] Calculating: 56 add 100 wasm_log_level=INFO wasm_log_msg=Calculating: 56 add 100
+2026-03-31T02:47:39.192477Z TRACE tokio-rt-worker mini_agent_wasm_session::tools::wasm: Guest log: [INFO] Result: 156 (at timestamp 1774925259192) wasm_log_level=INFO wasm_log_msg=Result: 156 (at timestamp 1774925259192)
+2026-03-31T02:47:39.192498Z  INFO tokio-rt-worker mini_agent_wasm_session::tools::wasm: ✅ WASM tool execution succeeded (75 chars output) output_len=75
+2026-03-31T02:47:39.192524Z DEBUG tokio-rt-worker mini_agent_wasm_session::tools::wasm: Full WASM tool output output={"expression":"56 + 100 = 156","result":156.0,"timestamp_ms":1774925259192}
+2026-03-31T02:47:39.192979Z  INFO            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::tools::wasm: WASM sandbox execution completed in 3ms elapsed_ms=3
+2026-03-31T02:47:39.193113Z  INFO            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::tools: ✅ Tool execution succeeded in 3ms tool=calculator elapsed_ms=3
+2026-03-31T02:47:39.193201Z TRACE            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::tools: Raw tool output tool=calculator raw_output={
+  "expression": "56 + 100 = 156",
+  "result": 156.0,
+  "timestamp_ms": 1774925259192
+}
+2026-03-31T02:47:39.193263Z DEBUG            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::tools: Serialized tool output (88 chars) tool=calculator serialized_len=88 serialized={
+  "expression": "56 + 100 = 156",
+  "result": 156.0,
+  "timestamp_ms": 1774925259192
+}
+2026-03-31T02:47:39.193318Z DEBUG            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::tools: Wrapping tool output in <tool_output> tags (115 chars) tool=calculator tool_call_id=call_d9dea5502e264624824dfc40 content_len=115
+2026-03-31T02:47:39.193367Z TRACE            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::tools: Full wrapped tool result tool=calculator wrapped_content=<tool_output>{
+  "expression": "56 + 100 = 156",
+  "result": 156.0,
+  "timestamp_ms": 1774925259192
+}</tool_output>
+2026-03-31T02:47:39.193403Z  INFO            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::tools: 📝 Creating tool result ChatMessage (role=Tool) tool=calculator tool_call_id=call_d9dea5502e264624824dfc40 is_error=false
+2026-03-31T02:47:39.193446Z  INFO            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: ✅ Tool 'calculator' succeeded in 4ms (88 chars output) tool=calculator elapsed_ms=4 output_len=88
+2026-03-31T02:47:39.193489Z DEBUG            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: Full tool output tool=calculator output={
+  "expression": "56 + 100 = 156",
+  "result": 156.0,
+  "timestamp_ms": 1774925259192
+}
+  ✅ Tool 'calculator' succeeded: {
+  "expression": "56 + 100 = 156",
+  "result": 156.0,
+  "timestamp_ms": 1774925...
+2026-03-31T02:47:39.193542Z DEBUG            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: Recording tool call for Turn history tool=calculator is_success=true
+2026-03-31T02:47:39.193588Z  INFO            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: 📝 Adding tool result for 'calculator' (call_id=call_d9dea5502e264624824dfc40) to conversation context
+2026-03-31T02:47:39.193634Z DEBUG            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: Context now has 8 messages (after adding tool result) message_count=8
+2026-03-31T02:47:39.193673Z  INFO            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: ⚙️  Executing tool [2/2]: calculator index=1 tool=calculator
+2026-03-31T02:47:39.193721Z DEBUG            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: Tool execution input tool_name=calculator tool_call_id=call_689dd21b7b3d4164ac562448 arguments={
+  "a": 56,
+  "b": 100,
+  "operation": "add"
+}
+2026-03-31T02:47:39.193762Z  INFO            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::tools: 🔍 Looking up tool in registry tool=calculator
+2026-03-31T02:47:39.193823Z DEBUG            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::tools: Tool found, preparing execution tool=calculator params={
+  "a": 56,
+  "b": 100,
+  "operation": "add"
+}
+  ⚙️  Executing tool: calculator with params: {"a":56,"b":100,"operation":"add"}
+2026-03-31T02:47:39.193897Z  INFO            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::tools: ⏱️  Executing tool with 30s timeout tool=calculator timeout_secs=30
+2026-03-31T02:47:39.193948Z  INFO            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::tools::wasm: 🔧 WasmTool::execute() — dispatching to WASM sandbox tool=calculator params={"a":56,"b":100,"operation":"add"}
+2026-03-31T02:47:39.194034Z  INFO tokio-rt-worker mini_agent_wasm_session::tools::wasm: 🏖️  Executing tool in WASM sandbox tool=calculator params={"a":56,"b":100,"operation":"add"} fuel_limit=1000000
+2026-03-31T02:47:39.195723Z DEBUG tokio-rt-worker mini_agent_wasm_session::tools::wasm: Instantiating WASM guest in sandbox...
+2026-03-31T02:47:39.196567Z  INFO tokio-rt-worker mini_agent_wasm_session::tools::wasm: 📤 Calling WASM guest execute() function
+2026-03-31T02:47:39.196771Z  INFO tokio-rt-worker mini_agent_wasm_session::tools::wasm: 📋 [WASM LOG] [INFO] Calculating: 56 add 100 wasm_log_level=INFO wasm_message=Calculating: 56 add 100
+    📋 [WASM LOG] [INFO] Calculating: 56 add 100
+2026-03-31T02:47:39.196846Z TRACE tokio-rt-worker mini_agent_wasm_session::tools::wasm: WASM guest called now_millis() millis=1774925259196
+2026-03-31T02:47:39.196902Z  INFO tokio-rt-worker mini_agent_wasm_session::tools::wasm: 📋 [WASM LOG] [INFO] Result: 156 (at timestamp 1774925259196) wasm_log_level=INFO wasm_message=Result: 156 (at timestamp 1774925259196)
+    📋 [WASM LOG] [INFO] Result: 156 (at timestamp 1774925259196)
+2026-03-31T02:47:39.197012Z  INFO tokio-rt-worker mini_agent_wasm_session::tools::wasm: ⛽ Fuel consumed: 15831 / 1000000 units fuel_consumed=15831 fuel_remaining=984169 fuel_limit=1000000
+    ⛽ Fuel consumed: 15831 / 1000000 units
+2026-03-31T02:47:39.197072Z DEBUG tokio-rt-worker mini_agent_wasm_session::tools::wasm: WASM guest produced 2 log message(s) log_count=2
+2026-03-31T02:47:39.197120Z TRACE tokio-rt-worker mini_agent_wasm_session::tools::wasm: Guest log: [INFO] Calculating: 56 add 100 wasm_log_level=INFO wasm_log_msg=Calculating: 56 add 100
+2026-03-31T02:47:39.197156Z TRACE tokio-rt-worker mini_agent_wasm_session::tools::wasm: Guest log: [INFO] Result: 156 (at timestamp 1774925259196) wasm_log_level=INFO wasm_log_msg=Result: 156 (at timestamp 1774925259196)
+2026-03-31T02:47:39.197194Z  INFO tokio-rt-worker mini_agent_wasm_session::tools::wasm: ✅ WASM tool execution succeeded (75 chars output) output_len=75
+2026-03-31T02:47:39.197224Z DEBUG tokio-rt-worker mini_agent_wasm_session::tools::wasm: Full WASM tool output output={"expression":"56 + 100 = 156","result":156.0,"timestamp_ms":1774925259196}
+2026-03-31T02:47:39.197617Z  INFO            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::tools::wasm: WASM sandbox execution completed in 3ms elapsed_ms=3
+2026-03-31T02:47:39.197713Z  INFO            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::tools: ✅ Tool execution succeeded in 3ms tool=calculator elapsed_ms=3
+2026-03-31T02:47:39.197785Z TRACE            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::tools: Raw tool output tool=calculator raw_output={
+  "expression": "56 + 100 = 156",
+  "result": 156.0,
+  "timestamp_ms": 1774925259196
+}
+2026-03-31T02:47:39.197843Z DEBUG            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::tools: Serialized tool output (88 chars) tool=calculator serialized_len=88 serialized={
+  "expression": "56 + 100 = 156",
+  "result": 156.0,
+  "timestamp_ms": 1774925259196
+}
+2026-03-31T02:47:39.197885Z DEBUG            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::tools: Wrapping tool output in <tool_output> tags (115 chars) tool=calculator tool_call_id=call_689dd21b7b3d4164ac562448 content_len=115
+2026-03-31T02:47:39.197919Z TRACE            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::tools: Full wrapped tool result tool=calculator wrapped_content=<tool_output>{
+  "expression": "56 + 100 = 156",
+  "result": 156.0,
+  "timestamp_ms": 1774925259196
+}</tool_output>
+2026-03-31T02:47:39.197948Z  INFO            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::tools: 📝 Creating tool result ChatMessage (role=Tool) tool=calculator tool_call_id=call_689dd21b7b3d4164ac562448 is_error=false
+2026-03-31T02:47:39.197980Z  INFO            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: ✅ Tool 'calculator' succeeded in 4ms (88 chars output) tool=calculator elapsed_ms=4 output_len=88
+2026-03-31T02:47:39.198012Z DEBUG            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: Full tool output tool=calculator output={
+  "expression": "56 + 100 = 156",
+  "result": 156.0,
+  "timestamp_ms": 1774925259196
+}
+  ✅ Tool 'calculator' succeeded: {
+  "expression": "56 + 100 = 156",
+  "result": 156.0,
+  "timestamp_ms": 1774925...
+2026-03-31T02:47:39.198050Z DEBUG            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: Recording tool call for Turn history tool=calculator is_success=true
+2026-03-31T02:47:39.198080Z  INFO            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: 📝 Adding tool result for 'calculator' (call_id=call_689dd21b7b3d4164ac562448) to conversation context
+2026-03-31T02:47:39.198113Z DEBUG            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: Context now has 9 messages (after adding tool result) message_count=9
+2026-03-31T02:47:39.198168Z  INFO            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: 🔄 All tools executed. Looping back to LLM with updated context (9 messages, 2 recorded tool calls) message_count=9 total_recorded=2
+2026-03-31T02:47:39.198206Z  INFO            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: ━━━ Iteration 2/10 ━━━ iteration=2 max=10 message_count=9 recorded_tool_calls=2
+
+--- Iteration 2/10 ---
+2026-03-31T02:47:39.198244Z  INFO            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: 📤 Step 1: Calling LLM...
+2026-03-31T02:47:39.198267Z DEBUG            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: Sending 9 messages and 1 tool definitions to LLM message_count=9 tool_count=1
+2026-03-31T02:47:39.198311Z TRACE            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: Message flow before LLM call messages_summary=[0]SYS → [1]USR → [2]AST → [3]TOL → [4]AST → [5]USR → [6]AST → [7]TOL → [8]TOL
+2026-03-31T02:47:39.198343Z  INFO            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: 📤 Preparing LLM API request url=http://api.haihub.cn/v1/chat/completions model=DeepSeek-V3-0324 message_count=9 tool_count=1
+2026-03-31T02:47:39.198726Z DEBUG            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: 📤 Full OpenAI API request body request_body={
+  "model": "DeepSeek-V3-0324",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a helpful assistant powered by the DeepSeek-V3-0324 model. You have access to a calculator tool. When the user asks a math question, use the calculator tool to compute the answer. For non-math questions, respond directly. You have conversation memory — you can reference previous turns in this thread. When asked about your identity, truthfully state that you are based on DeepSeek-V3-0324."
+    },
+    {
+      "role": "user",
+      "content": "What is 7 * 8?"
+    },
+    {
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_0_0",
+          "type": "function",
+          "function": {
+            "name": "calculator",
+            "arguments": "{\"a\":7,\"b\":8,\"operation\":\"mul\"}"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "content": "{\n  \"expression\": \"7 × 8 = 56\",\n  \"result\": 56.0,\n  \"timestamp_ms\": 1774925257961\n}",
+      "tool_call_id": "call_0_0",
+      "name": "calculator"
+    },
+    {
+      "role": "assistant",
+      "content": "The result of \\(7 \\times 8\\) is \\(56\\)."
+    },
+    {
+      "role": "user",
+      "content": "Now add 100 to that"
+    },
+    {
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_d9dea5502e264624824dfc40",
+          "type": "function",
+          "function": {
+            "name": "calculator",
+            "arguments": "{\"a\":56,\"b\":100,\"operation\":\"add\"}"
+          }
+        },
+        {
+          "id": "call_689dd21b7b3d4164ac562448",
+          "type": "function",
+          "function": {
+            "name": "calculator",
+            "arguments": "{\"a\":56,\"b\":100,\"operation\":\"add\"}"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "content": "<tool_output>{\n  \"expression\": \"56 + 100 = 156\",\n  \"result\": 156.0,\n  \"timestamp_ms\": 1774925259192\n}</tool_output>",
+      "tool_call_id": "call_d9dea5502e264624824dfc40",
+      "name": "calculator"
+    },
+    {
+      "role": "tool",
+      "content": "<tool_output>{\n  \"expression\": \"56 + 100 = 156\",\n  \"result\": 156.0,\n  \"timestamp_ms\": 1774925259196\n}</tool_output>",
+      "tool_call_id": "call_689dd21b7b3d4164ac562448",
+      "name": "calculator"
+    }
+  ],
+  "tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "calculator",
+        "description": "A sandboxed calculator tool. Performs basic math operations (add, sub, mul, div) inside a WASM sandbox.",
+        "parameters": {
+          "properties": {
+            "a": {
+              "description": "First operand",
+              "type": "number"
+            },
+            "b": {
+              "description": "Second operand",
+              "type": "number"
+            },
+            "operation": {
+              "description": "Math operation: add, sub, mul, div",
+              "enum": [
+                "add",
+                "sub",
+                "mul",
+                "div"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "operation",
+            "a",
+            "b"
+          ],
+          "type": "object"
+        }
+      }
+    }
+  ],
+  "tool_choice": "auto"
+}
+2026-03-31T02:47:39.198778Z DEBUG            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: Request summary: 9 messages [system → user → assistant → tool → assistant → user → assistant → tool → tool], 1 tools model=DeepSeek-V3-0324 message_count=9 tool_count=1 tool_choice=Some("auto") messages_roles=system → user → assistant → tool → assistant → user → assistant → tool → tool
+2026-03-31T02:47:39.198824Z  INFO            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: 🌐 Sending HTTP POST to http://api.haihub.cn/v1/chat/completions...
+2026-03-31T02:47:39.491798Z  INFO            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: 📥 HTTP response received: 200 OK in 292ms status=200 OK elapsed_ms=292
+2026-03-31T02:47:39.492196Z DEBUG            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: 📥 Raw API response body (482 bytes) response_body={"id":"c8e64a3a9e8d4431a43f9ba4c9bd9d5b","object":"chat.completion","created":1774925259,"model":"DeepSeek-V3-0324","choices":[{"index":0,"message":{"role":"assistant","content":"Adding 100 to 56 gives you \\(156\\).","reasoning_content":null,"tool_calls":null},"logprobs":null,"finish_reason":"stop","matched_stop":1}],"usage":{"prompt_tokens":606,"total_tokens":618,"completion_tokens":12,"prompt_tokens_details":null,"reasoning_tokens":0},"metadata":{"weight_version":"default"}} response_len=482
+2026-03-31T02:47:39.492384Z DEBUG            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: Parsed response: 1 choice(s) choice_count=1
+2026-03-31T02:47:39.492454Z DEBUG            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: Response choice: finish_reason=stop, has_content=true, has_tool_calls=false finish_reason=stop has_content=true has_tool_calls=false
+2026-03-31T02:47:39.492511Z  INFO            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: 💬 LLM returned text response (35 chars) text_len=35
+2026-03-31T02:47:39.492625Z DEBUG            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: Full LLM text response text=Adding 100 to 56 gives you \(156\).
+2026-03-31T02:47:39.492753Z  INFO            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: 📥 LLM responded in 294ms (finish_reason=Stop) elapsed_ms=294 finish_reason=Stop
+2026-03-31T02:47:39.492833Z  INFO            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: 💬 LLM returned TEXT response (35 chars, 2 tool calls recorded) text_len=35 total_tool_calls=2
+2026-03-31T02:47:39.492889Z DEBUG            main process_user_input{user_input=Now add 100 to that}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: Full text response from LLM text=Adding 100 to 56 gives you \(156\).
+  💬 LLM returned text: Adding 100 to 56 gives you \(156\).
+2026-03-31T02:47:39.492971Z  INFO            main process_user_input{user_input=Now add 100 to that}: mini_agent_wasm_session::agent: Agentic loop completed in 1204ms elapsed_ms=1204 is_ok=true
+2026-03-31T02:47:39.493022Z  INFO            main process_user_input{user_input=Now add 100 to that}: mini_agent_wasm_session::agent: ✅ Turn completed with response (35 chars, 2 tool calls) response_len=35 tool_call_count=2
+2026-03-31T02:47:39.493071Z DEBUG            main process_user_input{user_input=Now add 100 to that}: mini_agent_wasm_session::session: Recording tool call 'calculator' in Turn #1 turn=1 tool_name=calculator
+2026-03-31T02:47:39.493112Z DEBUG            main process_user_input{user_input=Now add 100 to that}: mini_agent_wasm_session::session: Recording tool result for 'calculator' in Turn #1 turn=1 tool_name=calculator
+2026-03-31T02:47:39.493150Z DEBUG            main process_user_input{user_input=Now add 100 to that}: mini_agent_wasm_session::session: Recording tool call 'calculator' in Turn #1 turn=1 tool_name=calculator
+2026-03-31T02:47:39.493185Z DEBUG            main process_user_input{user_input=Now add 100 to that}: mini_agent_wasm_session::session: Recording tool result for 'calculator' in Turn #1 turn=1 tool_name=calculator
+2026-03-31T02:47:39.493223Z  INFO            main process_user_input{user_input=Now add 100 to that}: mini_agent_wasm_session::session: Completing Turn #1 in thread thread_id=e6c34b14 turn=1
+2026-03-31T02:47:39.493259Z  INFO            main process_user_input{user_input=Now add 100 to that}: mini_agent_wasm_session::session: ✅ Turn #1 completed (35 chars response, 2 tool calls) turn=1 response_len=35 tool_call_count=2
+2026-03-31T02:47:39.493303Z DEBUG            main process_user_input{user_input=Now add 100 to that}: mini_agent_wasm_session::agent: Turn recorded and completed in thread turn_count=2 thread_id=e6c34b14
+2026-03-31T02:47:39.493358Z  INFO            main mini_agent_wasm_session::commands: ✅ Agent responded (35 chars) response_len=35
+
+🤖 Agent: Adding 100 to 56 gives you \(156\).
+
+🧑 [T3:e6c3] You: 2026-03-31T02:47:39.493419Z  INFO            main mini_agent_wasm_session: 📝 User input received input=/threads
+2026-03-31T02:47:39.493450Z DEBUG            main mini_agent_wasm_session::commands: Listing threads thread_count=2
+
+📋 Threads (2):
+   #1 [a61a8f7f] 3 turn(s) — "What is 42 + 58?"
+   #2 [e6c34b14] 2 turn(s) — "What is 7 * 8?" ← active
+
+🧑 [T3:e6c3] You: 2026-03-31T02:47:39.493504Z  INFO            main mini_agent_wasm_session: 📝 User input received input=/switch 1
+2026-03-31T02:47:39.493522Z DEBUG            main mini_agent_wasm_session::commands: User requested thread switch switch_target=1
+2026-03-31T02:47:39.493546Z  INFO            main mini_agent_wasm_session::session: 🔀 Switched active thread session_id=2c10fb56 old_thread=e6c34b14 new_thread=a61a8f7f
+2026-03-31T02:47:39.493569Z  INFO            main mini_agent_wasm_session::commands: ✅ Switched to thread thread_idx=1 thread_id=a61a8f7f turn_count=3
+✅ Switched to thread #1 [a61a8f7f] (3 turns)
+
+🧑 [T4:a61a] You: 2026-03-31T02:47:39.493601Z  INFO            main mini_agent_wasm_session: 📝 User input received input=Do you remember what we calculated? What was the final answer?
+2026-03-31T02:47:39.493615Z DEBUG            main mini_agent_wasm_session: Building system prompt for current model system_prompt_model=DeepSeek-V3-0324
+2026-03-31T02:47:39.493631Z  INFO            main mini_agent_wasm_session::commands: 🤖 Processing user input through Session pipeline input=Do you remember what we calculated? What was the final answer?
+
+🤖 Agent thinking...
+2026-03-31T02:47:39.493678Z  INFO            main process_user_input{user_input=Do you remember what we calculated? What was the final answer?}: mini_agent_wasm_session::agent: 📋 Processing user input in thread thread_id=a61a8f7f existing_turns=3
+2026-03-31T02:47:39.493704Z  INFO            main process_user_input{user_input=Do you remember what we calculated? What was the final answer?}: mini_agent_wasm_session::session: 📝 Starting Turn #3 in thread thread_id=a61a8f7f turn_number=3 user_input=Do you remember what we calculated? What was the final answer?
+2026-03-31T02:47:39.493729Z DEBUG            main process_user_input{user_input=Do you remember what we calculated? What was the final answer?}: mini_agent_wasm_session::session: Creating new Turn #3 turn_number=3 user_input=Do you remember what we calculated? What was the final answer?
+2026-03-31T02:47:39.493757Z  INFO            main process_user_input{user_input=Do you remember what we calculated? What was the final answer?}: mini_agent_wasm_session::agent: 📝 Turn #4 started turn_number=4 thread_id=a61a8f7f
+  📝 Turn #4 started in thread a61a8f7f
+2026-03-31T02:47:39.493797Z DEBUG            main process_user_input{user_input=Do you remember what we calculated? What was the final answer?}: mini_agent_wasm_session::session: 🔄 Rebuilding ChatMessage history from 4 turns thread_id=a61a8f7f turn_count=4
+2026-03-31T02:47:39.493827Z TRACE            main process_user_input{user_input=Do you remember what we calculated? What was the final answer?}: mini_agent_wasm_session::session: Added user message for Turn #0 turn=0
+2026-03-31T02:47:39.493854Z DEBUG            main process_user_input{user_input=Do you remember what we calculated? What was the final answer?}: mini_agent_wasm_session::session: Turn #0 has 1 tool call(s) to replay turn=0 tool_call_count=1
+2026-03-31T02:47:39.493894Z TRACE            main process_user_input{user_input=Do you remember what we calculated? What was the final answer?}: mini_agent_wasm_session::session: Added assistant response for Turn #0 turn=0
+2026-03-31T02:47:39.493922Z TRACE            main process_user_input{user_input=Do you remember what we calculated? What was the final answer?}: mini_agent_wasm_session::session: Added user message for Turn #1 turn=1
+2026-03-31T02:47:39.493945Z DEBUG            main process_user_input{user_input=Do you remember what we calculated? What was the final answer?}: mini_agent_wasm_session::session: Turn #1 has 1 tool call(s) to replay turn=1 tool_call_count=1
+2026-03-31T02:47:39.493985Z TRACE            main process_user_input{user_input=Do you remember what we calculated? What was the final answer?}: mini_agent_wasm_session::session: Added assistant response for Turn #1 turn=1
+2026-03-31T02:47:39.494014Z TRACE            main process_user_input{user_input=Do you remember what we calculated? What was the final answer?}: mini_agent_wasm_session::session: Added user message for Turn #2 turn=2
+2026-03-31T02:47:39.494037Z TRACE            main process_user_input{user_input=Do you remember what we calculated? What was the final answer?}: mini_agent_wasm_session::session: Added assistant response for Turn #2 turn=2
+2026-03-31T02:47:39.494061Z TRACE            main process_user_input{user_input=Do you remember what we calculated? What was the final answer?}: mini_agent_wasm_session::session: Added user message for Turn #3 turn=3
+2026-03-31T02:47:39.494088Z  INFO            main process_user_input{user_input=Do you remember what we calculated? What was the final answer?}: mini_agent_wasm_session::session: 📨 Rebuilt 11 messages from 4 turns thread_id=a61a8f7f total_messages=11 turn_count=4
+2026-03-31T02:47:39.494118Z  INFO            main process_user_input{user_input=Do you remember what we calculated? What was the final answer?}: mini_agent_wasm_session::agent: 📨 Context rebuilt: 12 messages (1 system + 11 from 4 turns) total_messages=12 history_messages=11 turn_count=4
+2026-03-31T02:47:39.494166Z DEBUG            main process_user_input{user_input=Do you remember what we calculated? What was the final answer?}: mini_agent_wasm_session::agent: Message role sequence messages_roles=SYS → USR → AST → TOL → AST → USR → AST → TOL → AST → USR → AST → USR
+  📨 Context: 12 messages (from 4 turns)
+2026-03-31T02:47:39.494199Z  INFO            main process_user_input{user_input=Do you remember what we calculated? What was the final answer?}: mini_agent_wasm_session::agent: 🔄 Launching agentic loop...
+2026-03-31T02:47:39.494254Z  INFO            main process_user_input{user_input=Do you remember what we calculated? What was the final answer?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: 🔄 Entering agentic loop tool_count=1 tools=["calculator"] initial_message_count=12
+2026-03-31T02:47:39.494296Z  INFO            main process_user_input{user_input=Do you remember what we calculated? What was the final answer?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: ━━━ Iteration 1/10 ━━━ iteration=1 max=10 message_count=12 recorded_tool_calls=0
+
+--- Iteration 1/10 ---
+2026-03-31T02:47:39.494344Z  INFO            main process_user_input{user_input=Do you remember what we calculated? What was the final answer?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: 📤 Step 1: Calling LLM...
+2026-03-31T02:47:39.494372Z DEBUG            main process_user_input{user_input=Do you remember what we calculated? What was the final answer?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: Sending 12 messages and 1 tool definitions to LLM message_count=12 tool_count=1
+2026-03-31T02:47:39.494417Z TRACE            main process_user_input{user_input=Do you remember what we calculated? What was the final answer?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: Message flow before LLM call messages_summary=[0]SYS → [1]USR → [2]AST → [3]TOL → [4]AST → [5]USR → [6]AST → [7]TOL → [8]AST → [9]USR → [10]AST → [11]USR
+2026-03-31T02:47:39.494447Z  INFO            main process_user_input{user_input=Do you remember what we calculated? What was the final answer?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: 📤 Preparing LLM API request url=http://api.haihub.cn/v1/chat/completions model=DeepSeek-V3-0324 message_count=12 tool_count=1
+2026-03-31T02:47:39.494740Z DEBUG            main process_user_input{user_input=Do you remember what we calculated? What was the final answer?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: 📤 Full OpenAI API request body request_body={
+  "model": "DeepSeek-V3-0324",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a helpful assistant powered by the DeepSeek-V3-0324 model. You have access to a calculator tool. When the user asks a math question, use the calculator tool to compute the answer. For non-math questions, respond directly. You have conversation memory — you can reference previous turns in this thread. When asked about your identity, truthfully state that you are based on DeepSeek-V3-0324."
+    },
+    {
+      "role": "user",
+      "content": "What is 42 + 58?"
+    },
+    {
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_0_0",
+          "type": "function",
+          "function": {
+            "name": "calculator",
+            "arguments": "{\"a\":42,\"b\":58,\"operation\":\"add\"}"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "content": "{\n  \"expression\": \"42 + 58 = 100\",\n  \"result\": 100.0,\n  \"timestamp_ms\": 1774925256365\n}",
+      "tool_call_id": "call_0_0",
+      "name": "calculator"
+    },
+    {
+      "role": "assistant",
+      "content": "The result of \\(42 + 58\\) is \\(100\\)."
+    },
+    {
+      "role": "user",
+      "content": "Now multiply that result by 3"
+    },
+    {
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_1_0",
+          "type": "function",
+          "function": {
+            "name": "calculator",
+            "arguments": "{\"a\":100,\"b\":3,\"operation\":\"mul\"}"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "content": "{\n  \"expression\": \"100 × 3 = 300\",\n  \"result\": 300.0,\n  \"timestamp_ms\": 1774925257014\n}",
+      "tool_call_id": "call_1_0",
+      "name": "calculator"
+    },
+    {
+      "role": "assistant",
+      "content": "The result of \\(100 \\times 3\\) is \\(300\\)."
+    },
+    {
+      "role": "user",
+      "content": "What was my first question?"
+    },
+    {
+      "role": "assistant",
+      "content": "Your first question was: **\"What is 42 + 58?\"**"
+    },
+    {
+      "role": "user",
+      "content": "Do you remember what we calculated? What was the final answer?"
+    }
+  ],
+  "tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "calculator",
+        "description": "A sandboxed calculator tool. Performs basic math operations (add, sub, mul, div) inside a WASM sandbox.",
+        "parameters": {
+          "properties": {
+            "a": {
+              "description": "First operand",
+              "type": "number"
+            },
+            "b": {
+              "description": "Second operand",
+              "type": "number"
+            },
+            "operation": {
+              "description": "Math operation: add, sub, mul, div",
+              "enum": [
+                "add",
+                "sub",
+                "mul",
+                "div"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "operation",
+            "a",
+            "b"
+          ],
+          "type": "object"
+        }
+      }
+    }
+  ],
+  "tool_choice": "auto"
+}
+2026-03-31T02:47:39.494775Z DEBUG            main process_user_input{user_input=Do you remember what we calculated? What was the final answer?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: Request summary: 12 messages [system → user → assistant → tool → assistant → user → assistant → tool → assistant → user → assistant → user], 1 tools model=DeepSeek-V3-0324 message_count=12 tool_count=1 tool_choice=Some("auto") messages_roles=system → user → assistant → tool → assistant → user → assistant → tool → assistant → user → assistant → user
+2026-03-31T02:47:39.494807Z  INFO            main process_user_input{user_input=Do you remember what we calculated? What was the final answer?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: 🌐 Sending HTTP POST to http://api.haihub.cn/v1/chat/completions...
+2026-03-31T02:47:40.104895Z  INFO            main process_user_input{user_input=Do you remember what we calculated? What was the final answer?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: 📥 HTTP response received: 200 OK in 610ms status=200 OK elapsed_ms=610
+2026-03-31T02:47:40.105369Z DEBUG            main process_user_input{user_input=Do you remember what we calculated? What was the final answer?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: 📥 Raw API response body (662 bytes) response_body={"id":"65dc509b7ffb48d89faf04e5c320370f","object":"chat.completion","created":1774925260,"model":"DeepSeek-V3-0324","choices":[{"index":0,"message":{"role":"assistant","content":"Yes! Here's a summary of our calculations:\n\n1. First, we calculated \\(42 + 58\\) and got \\(100\\).\n2. Then, we multiplied that result (\\(100\\)) by \\(3\\) and got \\(300\\).\n\nSo, the final answer was **300**.","reasoning_content":null,"tool_calls":null},"logprobs":null,"finish_reason":"stop","matched_stop":1}],"usage":{"prompt_tokens":578,"total_tokens":636,"completion_tokens":58,"prompt_tokens_details":null,"reasoning_tokens":0},"metadata":{"weight_version":"default"}} response_len=662
+2026-03-31T02:47:40.105636Z DEBUG            main process_user_input{user_input=Do you remember what we calculated? What was the final answer?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: Parsed response: 1 choice(s) choice_count=1
+2026-03-31T02:47:40.105744Z DEBUG            main process_user_input{user_input=Do you remember what we calculated? What was the final answer?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: Response choice: finish_reason=stop, has_content=true, has_tool_calls=false finish_reason=stop has_content=true has_tool_calls=false
+2026-03-31T02:47:40.105838Z  INFO            main process_user_input{user_input=Do you remember what we calculated? What was the final answer?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: 💬 LLM returned text response (202 chars) text_len=202
+2026-03-31T02:47:40.105911Z DEBUG            main process_user_input{user_input=Do you remember what we calculated? What was the final answer?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::llm::openai: Full LLM text response text=Yes! Here's a summary of our calculations:
+
+1. First, we calculated \(42 + 58\) and got \(100\).
+2. Then, we multiplied that result (\(100\)) by \(3\) and got \(300\).
+
+So, the final answer was **300**.
+2026-03-31T02:47:40.106034Z  INFO            main process_user_input{user_input=Do you remember what we calculated? What was the final answer?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: 📥 LLM responded in 611ms (finish_reason=Stop) elapsed_ms=611 finish_reason=Stop
+2026-03-31T02:47:40.106132Z  INFO            main process_user_input{user_input=Do you remember what we calculated? What was the final answer?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: 💬 LLM returned TEXT response (202 chars, 0 tool calls recorded) text_len=202 total_tool_calls=0
+2026-03-31T02:47:40.106215Z DEBUG            main process_user_input{user_input=Do you remember what we calculated? What was the final answer?}:run_agentic_loop{max_iter=10}: mini_agent_wasm_session::agent: Full text response from LLM text=Yes! Here's a summary of our calculations:
+
+1. First, we calculated \(42 + 58\) and got \(100\).
+2. Then, we multiplied that result (\(100\)) by \(3\) and got \(300\).
+
+So, the final answer was **300**.
+  💬 LLM returned text: Yes! Here's a summary of our calculations:
+
+1. First, we calculated \(42 + 58\) and got \(100\).
+2. ...
+2026-03-31T02:47:40.106343Z  INFO            main process_user_input{user_input=Do you remember what we calculated? What was the final answer?}: mini_agent_wasm_session::agent: Agentic loop completed in 612ms elapsed_ms=612 is_ok=true
+2026-03-31T02:47:40.106378Z  INFO            main process_user_input{user_input=Do you remember what we calculated? What was the final answer?}: mini_agent_wasm_session::agent: ✅ Turn completed with response (202 chars, 0 tool calls) response_len=202 tool_call_count=0
+2026-03-31T02:47:40.106409Z  INFO            main process_user_input{user_input=Do you remember what we calculated? What was the final answer?}: mini_agent_wasm_session::session: Completing Turn #3 in thread thread_id=a61a8f7f turn=3
+2026-03-31T02:47:40.106433Z  INFO            main process_user_input{user_input=Do you remember what we calculated? What was the final answer?}: mini_agent_wasm_session::session: ✅ Turn #3 completed (202 chars response, 0 tool calls) turn=3 response_len=202 tool_call_count=0
+2026-03-31T02:47:40.106463Z DEBUG            main process_user_input{user_input=Do you remember what we calculated? What was the final answer?}: mini_agent_wasm_session::agent: Turn recorded and completed in thread turn_count=4 thread_id=a61a8f7f
+2026-03-31T02:47:40.106503Z  INFO            main mini_agent_wasm_session::commands: ✅ Agent responded (202 chars) response_len=202
+
+🤖 Agent: Yes! Here's a summary of our calculations:
+
+1. First, we calculated \(42 + 58\) and got \(100\).
+2. Then, we multiplied that result (\(100\)) by \(3\) and got \(300\).
+
+So, the final answer was **300**.
+
+🧑 [T5:a61a] You: 2026-03-31T02:47:40.106555Z  INFO            main mini_agent_wasm_session: 📝 User input received input=/history
+2026-03-31T02:47:40.106572Z DEBUG            main mini_agent_wasm_session::commands: User requested turn history
+
+📜 Turn history for thread a61a8f7f (4 turns):
+
+   Turn #1 ✅ [02:47:35]
+     🧑 "What is 42 + 58?"
+     🔧 calculator({"a":42,"b":58,"operation":"add"}) → {
+  "expression": "42 + 58 = 100",
+  "result": 100.0,
+  "tim...
+     🤖 "The result of \(42 + 58\) is \(100\)."
+
+   Turn #2 ✅ [02:47:36]
+     🧑 "Now multiply that result by 3"
+     🔧 calculator({"a":100,"b":3,"operation":"mul"}) → {
+  "expression": "100 × 3 = 300",
+  "result": 300.0,
+  "ti...
+     🤖 "The result of \(100 \times 3\) is \(300\)."
+
+   Turn #3 ✅ [02:47:37]
+     🧑 "What was my first question?"
+     🤖 "Your first question was: **"What is 42 + 58?"**"
+
+   Turn #4 ✅ [02:47:39]
+     🧑 "Do you remember what we calculated? What was the final answe..."
+     🤖 "Yes! Here's a summary of our calculations:
+
+1. First, we calculated \(42 + 58\) ..."
+
+🧑 [T5:a61a] You: 2026-03-31T02:47:40.106755Z  INFO            main mini_agent_wasm_session: 📝 User input received input=/switch 2
+2026-03-31T02:47:40.106775Z DEBUG            main mini_agent_wasm_session::commands: User requested thread switch switch_target=2
+2026-03-31T02:47:40.106804Z  INFO            main mini_agent_wasm_session::session: 🔀 Switched active thread session_id=2c10fb56 old_thread=a61a8f7f new_thread=e6c34b14
+2026-03-31T02:47:40.106836Z  INFO            main mini_agent_wasm_session::commands: ✅ Switched to thread thread_idx=2 thread_id=e6c34b14 turn_count=2
+✅ Switched to thread #2 [e6c34b14] (2 turns)
+
+🧑 [T3:e6c3] You: 2026-03-31T02:47:40.106875Z  INFO            main mini_agent_wasm_session: 📝 User input received input=/history
+2026-03-31T02:47:40.106890Z DEBUG            main mini_agent_wasm_session::commands: User requested turn history
+
+📜 Turn history for thread e6c34b14 (2 turns):
+
+   Turn #1 ✅ [02:47:37]
+     🧑 "What is 7 * 8?"
+     🔧 calculator({"a":7,"b":8,"operation":"mul"}) → {
+  "expression": "7 × 8 = 56",
+  "result": 56.0,
+  "timest...
+     🤖 "The result of \(7 \times 8\) is \(56\)."
+
+   Turn #2 ✅ [02:47:38]
+     🧑 "Now add 100 to that"
+     🔧 calculator({"a":56,"b":100,"operation":"add"}) → {
+  "expression": "56 + 100 = 156",
+  "result": 156.0,
+  "ti...
+     🔧 calculator({"a":56,"b":100,"operation":"add"}) → {
+  "expression": "56 + 100 = 156",
+  "result": 156.0,
+  "ti...
+     🤖 "Adding 100 to 56 gives you \(156\)."
+
+🧑 [T3:e6c3] You: 2026-03-31T02:47:40.107006Z  INFO            main mini_agent_wasm_session: 📝 User input received input=/session
+2026-03-31T02:47:40.107032Z DEBUG            main mini_agent_wasm_session::commands: User requested session info
+
+📊 Session info:
+   ID: 2c10fb56-d2b8-4fb4-bdfd-0d1b6f0e928b
+   User: cli-user
+   Created: 2026-03-31 02:47:35
+   Threads: 2
+   Total turns: 6
+   Active thread: e6c34b14 (2 turns, Idle)
+   LLM: DeepSeek-V3-0324
+
+🧑 [T3:e6c3] You: 2026-03-31T02:47:40.107105Z  INFO            main mini_agent_wasm_session: 📝 User input received input=quit
+2026-03-31T02:47:40.107125Z  INFO            main mini_agent_wasm_session::commands: 👋 User requested exit thread_count=2 total_turns=6
+👋 Goodbye! Session had 2 thread(s), 6 total turn(s).
+2026-03-31T02:47:40.107152Z  INFO            main mini_agent_wasm_session: 👋 User requested exit thread_count=2 total_turns=6
+
+━━━ ANALYSIS SUMMARY ━━━
+
+Exit code: 0
+
+Turn count (user inputs processed):
+15
+
+Tool calls executed:
+20
+
+Threads created:
+0
+  (count not available)
+
+Errors:
+  (none)
+
+Session commands executed:
+  (none)
