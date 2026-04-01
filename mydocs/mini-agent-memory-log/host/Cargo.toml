@@ -1,0 +1,46 @@
+
+[package]
+name = "mini-agent-memory"
+version = "0.1.0"
+edition = "2021"
+description = """
+Mini Agent Loop with WASM Sandbox + Session + Long-Term Memory — IronClaw Core Distilled.
+Demonstrates: Session → Thread → Turn model with multi-turn conversation history,
+WASM sandbox tool execution, native memory tools (search/write/read),
+persistent workspace memory (MEMORY.md), and auto-memory extraction.
+"""
+publish = false
+
+[dependencies]
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+async-trait = "0.1"
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# HTTP client for LLM API
+reqwest = { version = "0.12", features = ["json", "stream"] }
+
+# Home directory for config
+dirs = "5"
+
+# WASM sandbox runtime
+wasmtime = { version = "28", features = ["component-model"] }
+wasmtime-wasi = "28"
+
+# UUID for session/thread/turn IDs
+uuid = { version = "1", features = ["v4"] }
+
+# Timestamps
+chrono = { version = "0.4", features = ["serde", "clock"] }
+
+# Tracing / structured logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+
+# Temp directory for tests
+tempfile = "3"
+
+[workspace]
