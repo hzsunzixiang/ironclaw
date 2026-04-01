@@ -2,18 +2,22 @@
 //! # CLI Command Handling
 //!
 //! Extracted from main.rs to keep the entry point clean.
-//! Handles all `/` commands (session management, model switching, memory)
+//! Handles all `/` commands (session management, model switching, memory, jobs)
 //! and delegates user input to the agentic loop.
 //!
-//! ## What's new compared to mini-agent-wasm-session:
+//! ## What's new compared to mini-agent-compress:
 //!
-//! | mini-agent-wasm-session        | mini-agent-memory                        |
+//! | mini-agent-compress            | mini-agent-multiagent                    |
 //! |-------------------------------|------------------------------------------|
-//! | No memory commands             | /memory, /memory-search, /memory-tree    |
+//! | No job commands                | /job, /jobs, /status, /cancel             |
+//! | No message routing             | Router dispatches to Chat vs Job          |
 
-use crate::agent::{process_user_input, AgenticLoopConfig};
+use crate::agent::process_user_input;
+use crate::agentic_loop::AgenticLoopConfig;
 use crate::llm::{ChatMessage, HaiConfig, LlmProvider};
 use crate::memory::MemoryStore;
+use crate::router::MessageIntent;
+use crate::scheduler::Scheduler;
 use crate::session::{Session, TurnState};
 use crate::tools::ToolRegistry;
 use crate::utils::truncate_str;
@@ -139,7 +143,7 @@ pub async fn handle_session_command(
         return CommandResult::Continue;
     }
 
-    // ── Memory commands (NEW) ──────────────────────────────────────
+    // ── Memory commands ──────────────────────────────────────
 
     if input == "/memory" {
         info!("📂 User requested memory content");
@@ -204,8 +208,6 @@ pub async fn handle_session_command(
 }
 
 /// Handle model management commands (/models, /model <name>).
-///
-/// Returns `Some(new_model)` if the model was switched, `None` otherwise.
 pub fn handle_model_command(
     input: &str,
     hai_config: &HaiConfig,
@@ -233,6 +235,121 @@ pub fn handle_model_command(
     }
 
     None
+}
+
+/// Handle job-related commands via the Scheduler.
+///
+/// Maps to: IronClaw's Router → Scheduler dispatch flow.
+pub async fn handle_job_command(
+    intent: &MessageIntent,
+    scheduler: &Scheduler,
+) -> Option<CommandResult> {
+    match intent {
+        MessageIntent::CreateJob { description } => {
+            println!("\n🚀 Creating background job...");
+            match scheduler.dispatch_job(description).await {
+                Ok(job_id) => {
+                    let short_id = &job_id.to_string()[..8];
+                    println!("✅ Job created: {} (id: {})", description, short_id);
+                    println!("   Use /jobs to list all jobs");
+                    println!("   Use /status {} to check progress", short_id);
+                    println!("   Use /cancel {} to stop it", short_id);
+                }
+                Err(e) => {
+                    println!("❌ Failed to create job: {}", e);
+                }
+            }
+            Some(CommandResult::Continue)
+        }
+
+        MessageIntent::ListJobs => {
+            let jobs = scheduler.list_jobs().await;
+            let running = scheduler.running_count().await;
+            println!("\n📋 Jobs ({} total, {} running):", jobs.len(), running);
+            if jobs.is_empty() {
+                println!("   No jobs yet. Use /job <description> to create one.");
+            } else {
+                for job in &jobs {
+                    let duration = job.completed_at
+                        .map(|c| {
+                            let dur = c.signed_duration_since(job.created_at);
+                            format!(" ({}s)", dur.num_seconds())
+                        })
+                        .unwrap_or_default();
+
+                    println!(
+                        "   [{}] {} — \"{}\"{}",
+                        job.short_id,
+                        job.state,
+                        truncate_str(&job.description, 40),
+                        duration
+                    );
+
+                    if let Some(ref result) = job.result {
+                        println!("         Result: {}", truncate_str(result, 60));
+                    }
+                    if let Some(ref error) = job.error {
+                        println!("         Error: {}", error);
+                    }
+                }
+            }
+            Some(CommandResult::Continue)
+        }
+
+        MessageIntent::CheckJobStatus { job_id } => {
+            match scheduler.find_job_by_short_id(job_id).await {
+                Some(job) => {
+                    println!("\n📊 Job Status:");
+                    println!("   ID: {}", job.id);
+                    println!("   Description: {}", job.description);
+                    println!("   State: {}", job.state);
+                    println!("   Created: {}", job.created_at.format("%H:%M:%S"));
+                    if let Some(completed) = job.completed_at {
+                        println!("   Completed: {}", completed.format("%H:%M:%S"));
+                        let duration = completed.signed_duration_since(job.created_at);
+                        println!("   Duration: {}s", duration.num_seconds());
+                    }
+                    println!("   Tool calls: {}", job.tool_calls_count);
+                    if let Some(ref result) = job.result {
+                        println!("   Result: {}", result);
+                    }
+                    if let Some(ref error) = job.error {
+                        println!("   Error: {}", error);
+                    }
+                }
+                None => {
+                    println!("❌ Job not found: {}", job_id);
+                    println!("   Use /jobs to list all jobs.");
+                }
+            }
+            Some(CommandResult::Continue)
+        }
+
+        MessageIntent::CancelJob { job_id } => {
+            match scheduler.find_job_by_short_id(job_id).await {
+                Some(job) => {
+                    match scheduler.cancel_job(job.id).await {
+                        Ok(()) => {
+                            println!("🛑 Cancel signal sent to job {}", job.short_id);
+                        }
+                        Err(e) => {
+                            println!("❌ Failed to cancel job: {}", e);
+                        }
+                    }
+                }
+                None => {
+                    println!("❌ Job not found: {}", job_id);
+                    println!("   Use /jobs to list all jobs.");
+                }
+            }
+            Some(CommandResult::Continue)
+        }
+
+        MessageIntent::UserInput { .. } => {
+            // Not a job command — let the caller handle it
+            None
+        }
+    }
 }
 
 /// Process user input through the Session/Thread/Turn + Memory pipeline.

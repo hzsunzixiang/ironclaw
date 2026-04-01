@@ -46,7 +46,7 @@
 
 use chrono::{Local, Utc};
 use std::path::{Path, PathBuf};
-use tracing::{debug, info, error};
+use tracing::{debug, info, error, trace};
 
 // ============================================================================
 // Well-Known Paths (maps to ironclaw's workspace::document::paths)
@@ -352,7 +352,16 @@ impl MemoryStore {
             .iter()
             .filter(|w| existing_lower.contains(w.as_str()))
             .count();
-        matches as f64 / new_words.len() as f64
+        let score = matches as f64 / new_words.len() as f64;
+        trace!(
+            matches = matches,
+            total_words = new_words.len(),
+            score = format!("{:.3}", score),
+            existing_snippet = %crate::utils::truncate_str(existing_text, 40),
+            "Similarity score: {}/{} words matched = {:.3}",
+            matches, new_words.len(), score
+        );
+        score
     }
 
     /// Append to today's daily log.
@@ -401,6 +410,12 @@ impl MemoryStore {
         let word_count = content.split_whitespace().count();
 
         if word_count <= max_words {
+            debug!(
+                word_count = word_count,
+                max_words = max_words,
+                "📏 MEMORY.md within limit ({} words ≤ {} max), no truncation needed",
+                word_count, max_words
+            );
             return content;
         }
 
@@ -651,6 +666,13 @@ pub fn extract_memories_from_turn(user_input: &str, response: &str) -> Vec<Strin
         return memories;
     }
 
+    trace!(
+        input = %crate::utils::truncate_str(user_input, 80),
+        response_len = response.len(),
+        "Analyzing turn for memory extraction (input={} chars, response={} chars)",
+        user_input.len(), response.len()
+    );
+
     // Heuristic 1: User explicitly asks to remember something
     if lower_input.contains("remember")
         || lower_input.contains("note that")
@@ -675,6 +697,10 @@ pub fn extract_memories_from_turn(user_input: &str, response: &str) -> Vec<Strin
             .to_string();
 
         if !fact.is_empty() && fact.len() > 5 {
+            debug!(
+                fact = %crate::utils::truncate_str(fact.trim(), 60),
+                "Heuristic 1 hit: explicit 'remember' request"
+            );
             memories.push(format!("User asked to remember: {}", fact.trim()));
         }
     }
@@ -687,6 +713,10 @@ pub fn extract_memories_from_turn(user_input: &str, response: &str) -> Vec<Strin
         || lower_input.contains("my favorite")
         || lower_input.contains("i usually")
     {
+        debug!(
+            input = %crate::utils::truncate_str(user_input, 60),
+            "Heuristic 2 hit: user preference detected"
+        );
         memories.push(format!("User preference: {}", user_input));
     }
 
@@ -698,6 +728,10 @@ pub fn extract_memories_from_turn(user_input: &str, response: &str) -> Vec<Strin
         || lower_input.contains("my job is")
         || lower_input.contains("i live in")
     {
+        debug!(
+            input = %crate::utils::truncate_str(user_input, 60),
+            "Heuristic 3 hit: personal info detected"
+        );
         memories.push(format!("User info: {}", user_input));
     }
 
@@ -714,9 +748,27 @@ pub fn extract_memories_from_turn(user_input: &str, response: &str) -> Vec<Strin
         {
             // The LLM confirmed saving something — the user input is the fact
             if user_input.len() > 10 {
+                debug!(
+                    input = %crate::utils::truncate_str(user_input, 60),
+                    "Heuristic 4 hit: LLM response confirmed saving"
+                );
                 memories.push(format!("Noted from conversation: {}", user_input));
             }
         }
+    }
+
+    if memories.is_empty() {
+        trace!(
+            input = %crate::utils::truncate_str(user_input, 60),
+            "No memories extracted from this turn"
+        );
+    } else {
+        debug!(
+            count = memories.len(),
+            input = %crate::utils::truncate_str(user_input, 60),
+            "Extracted {} memory/memories from turn",
+            memories.len()
+        );
     }
 
     memories

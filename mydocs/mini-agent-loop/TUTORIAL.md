@@ -715,7 +715,7 @@ public:
 
 ```rust
 #[derive(Default)]
-pub struct ToolRegistry {
+pub structtry  ToolRegis{
     tools: Vec<Box<dyn Tool>>,
 }
 ```

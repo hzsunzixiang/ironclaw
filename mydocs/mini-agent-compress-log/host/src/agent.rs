@@ -90,12 +90,27 @@ const TOKENS_PER_WORD: f64 = 1.3;
 fn estimate_message_tokens(message: &ChatMessage) -> usize {
     let word_count = message.content.split_whitespace().count();
     let overhead = 4; // ~4 tokens for role and message structure
-    (word_count as f64 * TOKENS_PER_WORD) as usize + overhead
+    let tokens = (word_count as f64 * TOKENS_PER_WORD) as usize + overhead;
+    trace!(
+        role = ?message.role,
+        word_count = word_count,
+        est_tokens = tokens,
+        "Token estimate for {:?} message: {} words → ~{} tokens",
+        message.role, word_count, tokens
+    );
+    tokens
 }
 
 /// Estimate total tokens for a list of messages.
 pub fn estimate_tokens(messages: &[ChatMessage]) -> usize {
-    messages.iter().map(estimate_message_tokens).sum()
+    let total: usize = messages.iter().map(estimate_message_tokens).sum();
+    trace!(
+        message_count = messages.len(),
+        est_total_tokens = total,
+        "Total token estimate: {} messages → ~{} tokens",
+        messages.len(), total
+    );
+    total
 }
 
 /// Check if context compaction is needed.
@@ -104,7 +119,17 @@ pub fn estimate_tokens(messages: &[ChatMessage]) -> usize {
 pub fn needs_compaction(messages: &[ChatMessage], config: &AgenticLoopConfig) -> bool {
     let tokens = estimate_tokens(messages);
     let threshold = (config.context_token_limit as f64 * config.compaction_threshold) as usize;
-    tokens >= threshold
+    let needs = tokens >= threshold;
+    trace!(
+        est_tokens = tokens,
+        threshold = threshold,
+        limit = config.context_token_limit,
+        needs_compaction = needs,
+        "Compaction check: {} tokens vs {} threshold ({:.0}% of {} limit) → {}",
+        tokens, threshold, config.compaction_threshold * 100.0,
+        config.context_token_limit, if needs { "COMPACT" } else { "OK" }
+    );
+    needs
 }
 
 /// Get context usage as a percentage.
