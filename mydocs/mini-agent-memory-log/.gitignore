@@ -1,0 +1,12 @@
+# Build artifacts
+target/
+*.wasm
+
+# Runtime logs
+trace-*.log
+
+# Workspace (runtime memory data)
+workspace/
+
+# Cargo.lock for library crates (guest is a cdylib)
+guest/Cargo.lock
