@@ -1,0 +1,68 @@
+package demo:sandbox@0.1.0;
+
+// WASM Tool Sandbox Interface
+//
+// This defines the contract between the host (agent loop) and guest (tool).
+//
+// Key idea:
+//   - The HOST provides functions (imports) that the guest can call
+//   - The GUEST exports functions that the host can call
+//   - The guest CANNOT do anything the host doesn't explicitly provide
+
+/// Host-provided capabilities for sandboxed tools.
+///
+/// These are the ONLY ways a sandboxed tool can interact with the outside world.
+/// If a function isn't listed here, the WASM guest simply cannot do it.
+/// No filesystem, no network, no system calls — only what the host allows.
+interface host {
+    /// Log levels for structured logging.
+    enum log-level {
+        info,
+        warn,
+        error,
+    }
+
+    /// Emit a log message. The host decides what to do with it.
+    log: func(level: log-level, message: string);
+
+    /// Get the current timestamp in milliseconds since Unix epoch.
+    /// The guest has no other way to know the time!
+    now-millis: func() -> u64;
+}
+
+/// Tool interface that sandboxed tools must implement (export).
+///
+/// The host calls these functions to interact with the tool.
+interface tool {
+    /// Request payload for tool execution.
+    record request {
+        /// JSON-encoded parameters.
+        params: string,
+    }
+
+    /// Response from tool execution.
+    record response {
+        /// JSON-encoded output on success.
+        output: option<string>,
+        /// Error message on failure.
+        error: option<string>,
+    }
+
+    /// Execute the tool with the given request.
+    execute: func(req: request) -> response;
+
+    /// Get the JSON Schema for this tool's parameters.
+    schema: func() -> string;
+
+    /// Get the tool's unique name (used for tool registration).
+    name: func() -> string;
+
+    /// Get a human-readable description of what this tool does.
+    description: func() -> string;
+}
+
+/// World definition: what the guest imports and exports.
+world sandboxed-tool {
+    import host;       // Guest can call these (provided by host)
+    export tool;       // Guest must implement these (called by host)
+}
